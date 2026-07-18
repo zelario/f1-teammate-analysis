@@ -1,4 +1,4 @@
-# F1 Teammate Performance Analysis: How do two teammates extract performance from the same car differently?
+# F1 Teammate Analysis: How do two teammates extract performance from the same car differently?
 
 A data analysis project investigating how two Formula 1 teammates extract performance from the same car.
 
