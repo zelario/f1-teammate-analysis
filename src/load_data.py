@@ -81,7 +81,6 @@ def find_drivers_and_segment(year, grand_prix, team):
 
     return driver1, driver2, segment
 
-
 def load_driver_data(year, grand_prix, driver, segment, session=None, results=None):
     """Load telemetry and metadata for a single driver.
 
@@ -195,8 +194,4 @@ def load_teammates_data(year, grand_prix, segment, driver1, driver2):
 
 
 if __name__ == "__main__":
-    year = 2024
-    grand_prix = "Japanese Grand Prix"
-    team = "Mercedes"
-    driver1, driver2, segment = find_drivers_and_segment(year, grand_prix, team)
-    load_teammates_data(year, grand_prix, segment, driver1, driver2)
+    pass

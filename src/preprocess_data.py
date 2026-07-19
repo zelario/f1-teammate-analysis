@@ -2,6 +2,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from scipy.interpolate import interp1d
+from . import load_data
 
 
 def check_processed_cache(year, grand_prix, driver, segment=None):
@@ -29,7 +30,7 @@ def check_processed_cache(year, grand_prix, driver, segment=None):
 
     return None
 
-def save_processed_cache(year, grand_prix, driver, processed_data, segment=None):
+def save_lap_cache(year, grand_prix, driver, processed_data, segment=None):
     """Persist a driver's processed payload to the processed cache.
 
     The cache key uses year, grand prix, segment, and driver abbreviation.
@@ -49,6 +50,25 @@ def save_processed_cache(year, grand_prix, driver, processed_data, segment=None)
     print(f"Saved: {out_path}")
 
     return out_path
+
+
+def load_processed_data(year, grand_prix, team):
+    driver_1, driver_2, segment = load_data.find_drivers_and_segment(year, grand_prix, team)
+    lap_1 = check_processed_cache(year, grand_prix, driver_1, segment)
+    lap_2 = check_processed_cache(year, grand_prix, driver_2, segment)
+    print(f"\nProcessed data for {year} {grand_prix} {team} found in cache.")
+    print(f"Driver 1: {lap_1['Driver']}, Driver 2: {lap_2['Driver']}, Segment: {segment}")
+    return lap_1, lap_2, segment
+
+
+def save_processed_data(year, grand_prix, team, lap_1, lap_2, segment):
+    driver_1 = lap_1.get("Driver")
+    driver_2 = lap_2.get("Driver")
+    save_lap_cache(year, grand_prix, driver_1, lap_1, segment)
+    save_lap_cache(year, grand_prix, driver_2, lap_2, segment)
+    print(f"\nProcessed data for {year} {grand_prix} {team} saved to cache.")
+    print(f"Driver 1: {driver_1}, Driver 2: {driver_2}, Segment: {segment}")
+    
 
 def preprocess_telemetry(telemetry):
     """Select and clean the telemetry columns used for analysis.

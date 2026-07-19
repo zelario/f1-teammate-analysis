@@ -42,17 +42,17 @@ def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, driver_1, driver_
     plt.figure(figsize=(12, 6))
 
     plt.plot(
-        lap_1_telemetry["Distance"],
-        lap_1_telemetry[variable],
-        label=driver_1,
-        color="green"
-    )
-
-    plt.plot(
         lap_2_telemetry["Distance"],
         lap_2_telemetry[variable],
         label=driver_2,
         color="red"
+    )
+
+    plt.plot(
+        lap_1_telemetry["Distance"],
+        lap_1_telemetry[variable],
+        label=driver_1,
+        color="green"
     )
 
     plt.xlabel("Distance (m)")
@@ -87,7 +87,7 @@ def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, va
         lap_1_telemetry["Distance"],
         delta_variable,
         label=f"{driver_1} - {driver_2}",
-        color="green"
+        color="skyblue"
     )
 
     plt.xlabel("Distance (m)")
