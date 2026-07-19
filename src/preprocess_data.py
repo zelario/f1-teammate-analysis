@@ -1,5 +1,8 @@
 from pathlib import Path
 import pandas as pd
+import numpy as np
+from scipy.interpolate import interp1d
+
 
 def check_processed_cache(year, grand_prix, driver, segment=None):
     """Return a cached processed payload for a driver if it exists.
@@ -9,9 +12,16 @@ def check_processed_cache(year, grand_prix, driver, segment=None):
     """
     project_root = Path(__file__).resolve().parent.parent
     cache_dir = project_root / "data" / "processed"
+
+    # Accept either a driver string or a driver payload dict
+    if isinstance(driver, dict):
+        driver_key = driver.get("Driver") or driver.get("driver") or driver.get("Abbreviation") or driver.get("abbr")
+    else:
+        driver_key = driver
+
     gp = str(grand_prix).strip().replace(" ", "_").lower()
     seg = segment if segment is not None else "session"
-    key = f"{year}_{gp}_{seg}_{driver}"
+    key = f"{year}_{gp}_{seg}_{driver_key}"
     out_path = cache_dir / f"{key}.pkl"
 
     if out_path.exists():
@@ -150,3 +160,105 @@ def preprocess_teammates_data(year, grand_prix, segment, driver1_data, driver2_d
     preprocessed_driver2_data = preprocess_driver_data(driver2_data)
 
     return preprocessed_driver1_data, preprocessed_driver2_data
+
+
+def interpolate_telemetry(d1_telemetry,d2_telemetry, n_points=1000):
+    """
+    Interpolate two drivers' telemetry onto a common distance grid.
+
+    Continuous variables are linearly interpolated.
+    Discrete variables use nearest-neighbor interpolation.
+
+    Parameters
+    ----------
+    d1_telemetry : pandas.DataFrame
+        First driver's telemetry data.
+
+    d2_telemetry : pandas.DataFrame
+        Second driver's telemetry data.
+
+    n_points : int, default=1000
+        Number of points in the common distance grid.
+
+    Returns
+    -------
+    d1_interpolated : pandas.DataFrame
+        First driver's interpolated telemetry.
+
+    d2_interpolated : pandas.DataFrame
+        Second driver's interpolated telemetry.
+    """
+
+    continuous_columns = [
+        "Time",
+        "Speed",
+        "RPM",
+        "Throttle"
+    ]
+
+    discrete_columns = [
+        "nGear",
+        "Brake"
+    ]
+
+    # Find the distance range shared by both drivers
+    min_distance = max(
+        d1_telemetry["Distance"].min(),
+        d2_telemetry["Distance"].min()
+    )
+
+    max_distance = min(
+        d1_telemetry["Distance"].max(),
+        d2_telemetry["Distance"].max()
+    )
+
+    # Create a common distance grid
+    distance = np.linspace(
+        min_distance,
+        max_distance,
+        n_points
+    )
+
+    # Create the output DataFrames
+    d1_interpolated = pd.DataFrame({
+        "Distance": distance
+    })
+
+    d2_interpolated = pd.DataFrame({
+        "Distance": distance
+    })
+
+    # Linearly interpolate continuous variables
+    for column in continuous_columns:
+
+        d1_interpolated[column] = np.interp(
+            distance,
+            d1_telemetry["Distance"],
+            d1_telemetry[column]
+        )
+
+        d2_interpolated[column] = np.interp(
+            distance,
+            d2_telemetry["Distance"],
+            d2_telemetry[column]
+        )
+
+    # Use nearest-neighbor interpolation for discrete variables
+    for column in discrete_columns:
+
+        d1_interpolator = interp1d(
+            d1_telemetry["Distance"],
+            d1_telemetry[column],
+            kind="nearest"
+        )
+
+        d2_interpolator = interp1d(
+            d2_telemetry["Distance"],
+            d2_telemetry[column],
+            kind="nearest"
+        )
+
+        d1_interpolated[column] = d1_interpolator(distance).astype(int)
+        d2_interpolated[column] = d2_interpolator(distance).astype(int)
+
+    return d1_interpolated, d2_interpolated
