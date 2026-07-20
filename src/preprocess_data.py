@@ -1,6 +1,7 @@
 from pathlib import Path
 import pandas as pd
 import numpy as np
+from requests import session
 from scipy.interpolate import interp1d
 from . import load_data
 
@@ -52,13 +53,12 @@ def save_lap_cache(year, grand_prix, driver, processed_data, segment=None):
     return out_path
 
 
-def load_processed_data(year, grand_prix, team):
-    driver_1, driver_2, segment = load_data.find_drivers_and_segment(year, grand_prix, team)
+def load_processed_data(driver_1, driver_2, year, grand_prix, segment):
     lap_1 = check_processed_cache(year, grand_prix, driver_1, segment)
     lap_2 = check_processed_cache(year, grand_prix, driver_2, segment)
-    print(f"\nProcessed data for {year} {grand_prix} {team} found in cache.")
+    print(f"\nProcessed data for {year} {grand_prix} {driver_1} and {driver_2} found in cache.")
     print(f"Driver 1: {lap_1['Driver']}, Driver 2: {lap_2['Driver']}, Segment: {segment}")
-    return lap_1, lap_2, segment
+    return lap_1, lap_2
 
 
 def save_processed_data(year, grand_prix, team, lap_1, lap_2, segment):

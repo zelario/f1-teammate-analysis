@@ -43,29 +43,36 @@ def save_unprocessed_cache(year, grand_prix, driver, lap_data, segment):
     return out_path
 
 
-def find_drivers_and_segment(year, grand_prix, team):
-    """Find the best shared segment (Q3 > Q2 > Q1) for both teammates in a session.
+def get_drivers(session, team):
+    """Return the two drivers for a team in a session.
 
-    Returns the segment name (e.g., 'Q3') or None if no shared segment is found.
+    Returns a tuple of (driver1, driver2).
     """
-    session = fastf1.get_session(year, grand_prix, "Q")
-    session.load()
-
+    
     try:
         results = session.results
     except Exception:
         results = None
 
-    team_column = "Team" if results is not None and "Team" in results.columns else "TeamName"
-    if results is None or team_column not in results.columns:
-        raise KeyError("No team column found in session results")
-
     team_drivers = results[
-        results[team_column] == team
+        results["TeamName"] == team
     ]["Abbreviation"].tolist()
 
     driver1 = team_drivers[0] if len(team_drivers) > 0 else None
     driver2 = team_drivers[1] if len(team_drivers) > 1 else None
+
+    return driver1, driver2
+
+def get_segment(session, driver1, driver2):
+    """Find the best shared segment (Q3 > Q2 > Q1) for both teammates in a session.
+
+    Returns the segment name (e.g., 'Q3') or None if no shared segment is found.
+    """
+
+    try:
+        results = session.results
+    except Exception:
+        results = None
 
     segment = None
     if results is not None:
@@ -79,7 +86,23 @@ def find_drivers_and_segment(year, grand_prix, team):
         except Exception:
             segment = None
 
-    return driver1, driver2, segment
+    return segment
+
+
+def get_corners(session):
+    
+    circuit_info = session.get_circuit_info()
+
+    corners = circuit_info.corners[
+        ["Number", "Distance"]
+    ].copy()
+
+    corners = corners.sort_values(
+        by="Distance"
+    ).reset_index(drop=True)
+
+    return corners
+
 
 def load_driver_data(year, grand_prix, driver, segment, session=None, results=None):
     """Load telemetry and metadata for a single driver.
