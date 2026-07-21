@@ -4,7 +4,7 @@ from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
 
-def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, variable, corners):
+def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, driver_1= None, driver_2= None, ):
     """
     Plot a telemetry variable against distance for two drivers.
 
@@ -25,8 +25,8 @@ def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, driver_1, driver_
     variable : str
         Column to plot on the y-axis.
         
-    corners : pandas.DataFrame
-        DataFrame with corner information ('Number', 'Distance').
+    turns : pandas.DataFrame
+        DataFrame with turn information ('Number', 'Distance').
     """
 
     y_label = variable
@@ -35,19 +35,25 @@ def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, driver_1, driver_
 
     plt.figure(figsize=(12, 6))
 
-    plt.plot(
-        lap_2_telemetry["Distance"],
-        lap_2_telemetry[variable],
-        label=driver_2,
-        color="red"
-    )
+    if driver_1 is not None:
+        plt.plot(
+            lap_1_telemetry["Distance"],
+            lap_1_telemetry[variable],
+            label=driver_1,
+            color="green",
+            alpha=1,
+            linewidth=0.8
+        )
 
-    plt.plot(
-        lap_1_telemetry["Distance"],
-        lap_1_telemetry[variable],
-        label=driver_1,
-        color="green"
-    )
+    if driver_2 is not None:
+        plt.plot(
+            lap_2_telemetry["Distance"],
+            lap_2_telemetry[variable],
+            label=driver_2,
+            color="red",
+            alpha=1,
+            linewidth=0.8
+        )
 
     plt.xlabel("Distance (m)")
     plt.ylabel(y_label)
@@ -56,13 +62,13 @@ def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, driver_1, driver_
     plt.legend()
     plt.grid()
 
-    # Set x-axis ticks to corner numbers
-    plt.xticks(ticks=corners['Distance'], labels=corners['Number'])
-    plt.xlabel("Corner Number")
+    # Set x-axis ticks to turn numbers
+    plt.xticks(ticks=turns['Distance'], labels=turns['Number'])
+    plt.xlabel("Turn Number")
 
     plt.show()
 
-def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, variable, corners):
+def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, variable, turns):
     """
     Plot the difference in a telemetry variable between two drivers against distance.
 
@@ -102,8 +108,8 @@ def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, va
     plt.legend()
     plt.grid()
 
-    # Set x-axis ticks to corner numbers
-    plt.xticks(ticks=corners['Distance'], labels=corners['Number'])
-    plt.xlabel("Corner Number")
+    # Set x-axis ticks to turn numbers
+    plt.xticks(ticks=turns['Distance'], labels=turns['Number'])
+    plt.xlabel("Turn Number")
 
     plt.show()

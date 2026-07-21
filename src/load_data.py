@@ -89,19 +89,19 @@ def get_segment(session, driver1, driver2):
     return segment
 
 
-def get_corners(session):
+def get_turns(session):
     
     circuit_info = session.get_circuit_info()
 
-    corners = circuit_info.corners[
+    turns = circuit_info.corners[
         ["Number", "Distance"]
     ].copy()
 
-    corners = corners.sort_values(
+    turns = turns.sort_values(
         by="Distance"
     ).reset_index(drop=True)
 
-    return corners
+    return turns
 
 
 def load_driver_data(year, grand_prix, driver, segment, session=None, results=None):
