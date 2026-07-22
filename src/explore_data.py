@@ -141,14 +141,16 @@ def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2,
         x - width / 2,
         comparison[f"{feature}_{driver_1}"],
         width,
-        label=driver_1
+        label=driver_1,
+        color="green"
     )
 
     plt.bar(
         x + width / 2,
         comparison[f"{feature}_{driver_2}"],
         width,
-        label=driver_2
+        label=driver_2,
+        color="gray"
     )
 
     plt.xticks(x, comparison["Turn"])
@@ -196,7 +198,8 @@ def barplot_feature_delta(lap_1_feature, lap_2_feature, driver_1, driver_2, turn
 
     plt.bar(
         comparison["Turn"],
-        comparison["Delta"]
+        comparison["Delta"],
+        color="skyblue"
     )
 
     plt.xlabel("Turn")
