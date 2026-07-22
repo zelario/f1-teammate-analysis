@@ -1,7 +1,6 @@
 import pandas as pd
 
-
-def analyze_corners(telemetry, turns, entry_distance=50, exit_distance=50, minimum_speed_window=50):
+def analyze_speed_metrics(telemetry, turns, entry_distance=50, exit_distance=50, minimum_speed_window=50):
 
     telemetry = telemetry.reset_index(drop=True)
 
@@ -73,7 +72,7 @@ def analyze_corners(telemetry, turns, entry_distance=50, exit_distance=50, minim
     return corner_features_df
 
 
-def analyze_braking_zones(telemetry):
+def analyze_braking_zones(telemetry, turns, braking_distance=300):
 
     telemetry = telemetry.reset_index(drop=True)
 
@@ -91,12 +90,10 @@ def analyze_braking_zones(telemetry):
             "BrakingDuration": (zone["Time"].iloc[-1] - zone["Time"].iloc[0]),
             "BrakingDistance": (zone["Distance"].iloc[-1] - zone["Distance"].iloc[0]),
         })
+        
+    braking_zones = pd.DataFrame(braking_zones).reset_index(drop=True)
 
-    return pd.DataFrame(braking_zones)
-
-
-def assign_braking_zones_to_turns(braking_zones, turns, braking_distance=300):
-
+    # Assign braking zones to turns
     assigned_zones = []
     used_indices = set()
 
@@ -143,198 +140,66 @@ def assign_braking_zones_to_turns(braking_zones, turns, braking_distance=300):
     return assigned_zones_df
 
 
-def analyze_acceleration_zones(telemetry, braking_zones, full_throttle_threshold=95):
+def analyze_throttle_segments(telemetry, turns, full_throttle_threshold=95):
 
     telemetry = telemetry.reset_index(drop=True)
 
-    acceleration_zones = []
+    turns = turns.copy()
 
-    for _, braking_zone in braking_zones.iterrows():
+    start_turn = pd.DataFrame([{
+        "Number": 0,
+        "Distance": telemetry["Distance"].min()
+    }])
 
-        braking_end_distance = braking_zone["EndDistance"]
+    turns = pd.concat(
+        [start_turn, turns],
+        ignore_index=True
+    )
 
-        # To identify the apex (minimum speed) in the corner between two braking zones
+    throttle_features = []
 
-        next_braking_zones = braking_zones[
-            braking_zones["StartDistance"] > braking_end_distance
-        ]
+    for i in range(len(turns)):
 
-        if not next_braking_zones.empty:
+        turn = turns.iloc[i]
 
-            next_braking_start = next_braking_zones["StartDistance"].min()
+        start_distance = turn["Distance"]
 
-            apex_search_window = telemetry[
-                (telemetry["Distance"] > braking_end_distance)
-                & (telemetry["Distance"] < next_braking_start)
-            ]
+        if i + 1 < len(turns):
 
-        else:
-
-            apex_search_window = telemetry[
-                telemetry["Distance"] > braking_end_distance
-            ]
-
-        if apex_search_window.empty:
-            continue
-
-        # The start of acceleration is the apex (point of minimum speed)
-
-        acceleration_start = apex_search_window.loc[
-            apex_search_window["Speed"].idxmin()
-        ]
-
-        # Get telemetry until the next braking zone
-
-        if not next_braking_zones.empty:
-
-            acceleration_telemetry = telemetry[
-                (telemetry["Distance"] >= acceleration_start["Distance"])
-                & (telemetry["Distance"] < next_braking_start)
-            ]
+            end_distance = turns.iloc[i + 1]["Distance"]
 
         else:
 
-            acceleration_telemetry = telemetry[
-                telemetry["Distance"] >= acceleration_start["Distance"]
-            ]
+            end_distance = telemetry["Distance"].max()
 
-        if acceleration_telemetry.empty:
-            continue
-
-        # Find first point of full throttle
-
-        full_throttle_points = acceleration_telemetry[
-            acceleration_telemetry["Throttle"] >= full_throttle_threshold
+        segment = telemetry[
+            (telemetry["Distance"] >= start_distance)
+            & (telemetry["Distance"] < end_distance)
         ]
 
-        time_to_full_throttle = None
-        distance_to_full_throttle = None
-        speed_gain_to_full_throttle = None
+        if segment.empty:
 
-        if not full_throttle_points.empty:
+            continue
 
-            full_throttle = full_throttle_points.iloc[0]
+        throttle = segment["Throttle"]
 
-            time_to_full_throttle = (
-                full_throttle["Time"]
-                - acceleration_start["Time"]
-            )
+        full_throttle = (
+            throttle >= full_throttle_threshold
+        )
 
-            distance_to_full_throttle = (
-                full_throttle["Distance"]
-                - acceleration_start["Distance"]
-            )
-
-            speed_gain_to_full_throttle = (
-                full_throttle["Speed"]
-                - acceleration_start["Speed"]
-            )
-
-        acceleration_zones.append({
-            "Turn": braking_zone["Turn"],
-            "StartDistance": acceleration_start["Distance"],
-            "EndDistance": acceleration_telemetry["Distance"].iloc[-1],
-            "AccelerationDuration": acceleration_telemetry["Time"].iloc[-1] - acceleration_start["Time"],
-            "AccelerationDistance": acceleration_telemetry["Distance"].iloc[-1] - acceleration_start["Distance"],
-            "TimeToFullThrottle": time_to_full_throttle,
-            "DistanceToFullThrottle": distance_to_full_throttle,
-            "SpeedGainToFullThrottle": speed_gain_to_full_throttle
+        throttle_features.append({
+            "Turn": turn["Number"],
+            "StartDistance": start_distance,
+            "EndDistance": end_distance,
+            "MeanThrottle": throttle.mean(),
+            "StdThrottle": throttle.std(),
+            "FullThrottlePercentage": (full_throttle.mean() * 100)
         })
+        
+    throttle_features_df = pd.DataFrame(throttle_features).reset_index(drop=True)
+    throttle_features_df["Turn"] = throttle_features_df["Turn"].astype(int)
 
-    acceleration_zones_df = pd.DataFrame(acceleration_zones).reset_index(drop=True)
-    acceleration_zones_df["Turn"] = acceleration_zones_df["Turn"].astype(int)
-
-    return acceleration_zones_df
-
-
-def analyze_throttle_lifts(telemetry, acceleration_zones, full_throttle_threshold=95, lift_distance_threshold=50):
-
-    telemetry = telemetry.reset_index(drop=True)
-    acceleration_zones = acceleration_zones.copy()
-
-    number_of_lifts = []
-    maximum_throttle_reductions = []
-
-    for _, acceleration_zone in acceleration_zones.iterrows():
-
-        acceleration_telemetry = telemetry[
-            (telemetry["Distance"] >= acceleration_zone["StartDistance"])
-            & (telemetry["Distance"] <= acceleration_zone["EndDistance"])
-        ]
-
-        if acceleration_telemetry.empty:
-
-            number_of_lifts.append(0)
-            maximum_throttle_reductions.append(0)
-
-            continue
-
-        end_distance = acceleration_telemetry["Distance"].iloc[-1]
-
-        lift_telemetry = acceleration_telemetry[
-            acceleration_telemetry["Distance"] <= end_distance - lift_distance_threshold
-        ]
-
-        lifts = 0
-        maximum_reduction = 0
-
-        in_full_throttle = False
-        lift_active = False
-        previous_throttle = None
-        current_lift_minimum = None
-
-        for throttle in lift_telemetry["Throttle"]:
-
-            if previous_throttle is None:
-
-                previous_throttle = throttle
-                continue
-
-            if throttle >= full_throttle_threshold:
-
-                if lift_active and current_lift_minimum is not None:
-
-                    maximum_reduction = max(
-                        maximum_reduction,
-                        100 - current_lift_minimum
-                    )
-
-                in_full_throttle = True
-                lift_active = False
-                current_lift_minimum = None
-
-            elif in_full_throttle:
-
-                lift_active = True
-
-                if current_lift_minimum is None:
-                    current_lift_minimum = throttle
-
-                else:
-                    current_lift_minimum = min(
-                        current_lift_minimum,
-                        throttle
-                    )
-
-                if previous_throttle >= full_throttle_threshold:
-                    lifts += 1
-
-            previous_throttle = throttle
-
-        if lift_active and current_lift_minimum is not None:
-
-            maximum_reduction = max(
-                maximum_reduction,
-                100 - current_lift_minimum
-            )
-
-        number_of_lifts.append(lifts)
-        maximum_throttle_reductions.append(maximum_reduction)
-
-    acceleration_zones["NumberOfThrottleLifts"] = number_of_lifts
-    acceleration_zones["MaximumThrottleReduction"] = maximum_throttle_reductions
-
-    return acceleration_zones
+    return throttle_features_df
 
 
 def analyze_gear_shifts(telemetry):

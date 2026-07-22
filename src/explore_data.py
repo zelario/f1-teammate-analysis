@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
-
-def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, driver_1= None, driver_2= None, ):
+def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, driver_1= None, driver_2= None, y_unit=None):
     """
     Plot a telemetry variable against distance for two drivers.
 
@@ -26,8 +26,6 @@ def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, 
     turns : pandas.DataFrame
         DataFrame with turn information ('Number', 'Distance').
     """
-
-    y_label = variable
 
     title = f"{variable} of {driver_1} and {driver_2} throughout the lap"
 
@@ -54,7 +52,7 @@ def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, 
         )
 
     plt.xlabel("Distance (m)")
-    plt.ylabel(y_label)
+    plt.ylabel(f"{variable} ({y_unit})" if y_unit is not None else variable)
     plt.title(title)
 
     plt.legend()
@@ -66,7 +64,7 @@ def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, 
 
     plt.show()
 
-def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, variable, turns):
+def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, variable, turns, y_unit=None):
     """
     Plot the difference in a telemetry variable between two drivers against distance.
 
@@ -99,7 +97,7 @@ def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, va
     )
 
     plt.xlabel("Distance (m)")
-    plt.ylabel(f" {variable} Delta")
+    plt.ylabel(f" {variable} Delta ({y_unit})" if y_unit is not None else f" {variable} Delta")
     plt.title(f"{variable} Delta between {driver_1} and {driver_2}")
 
     plt.axhline(0, color='black', linestyle='--', linewidth=0.8)
@@ -115,9 +113,17 @@ def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, va
 
 # Feature analysis functions
 
-def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2, turns, feature, ylabel=None):
+def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2, turns, feature, y_unit=None, include_zero=False):
 
-    comparison = turns[["Number"]].rename(columns={"Number": "Turn"})
+    turn_numbers = turns["Number"].tolist()
+
+    if include_zero:
+
+        turn_numbers = [0] + turn_numbers
+
+    comparison = pd.DataFrame({
+        "Turn": turn_numbers
+    })
 
     comparison = comparison.merge(
         lap_1_feature[["Turn", feature]],
@@ -157,8 +163,10 @@ def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2,
 
     plt.xlabel("Turn")
 
-    if ylabel is not None:
-        plt.ylabel(ylabel)
+    if y_unit is not None:
+        plt.ylabel(f"{feature} ({y_unit})")
+    else:
+        plt.ylabel(feature.replace("_", " "))
 
     plt.title(feature.replace("_", " "))
 
@@ -170,9 +178,17 @@ def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2,
     plt.show()
     
     
-def barplot_feature_delta(lap_1_feature, lap_2_feature, driver_1, driver_2, turns, feature, ylabel=None):
+def barplot_feature_delta(lap_1_feature, lap_2_feature, driver_1, driver_2, turns, feature, y_unit=None, include_zero=False):
 
-    comparison = turns[["Number"]].rename(columns={"Number": "Turn"})
+    turn_numbers = turns["Number"].tolist()
+
+    if include_zero:
+
+        turn_numbers = [0] + turn_numbers
+
+    comparison = pd.DataFrame({
+        "Turn": turn_numbers
+    })
 
     comparison = comparison.merge(
         lap_1_feature[["Turn", feature]],
@@ -204,8 +220,10 @@ def barplot_feature_delta(lap_1_feature, lap_2_feature, driver_1, driver_2, turn
 
     plt.xlabel("Turn")
 
-    if ylabel is not None:
-        plt.ylabel(ylabel)
+    if y_unit is not None:
+        plt.ylabel(f"{feature} ({y_unit})")
+    else:
+        plt.ylabel(feature.replace("_", " "))
 
     plt.title(f"{feature} ({driver_1} - {driver_2})")
 
