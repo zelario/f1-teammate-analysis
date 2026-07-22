@@ -1,73 +1,7 @@
-from pathlib import Path
 import pandas as pd
 import numpy as np
-from requests import session
 from scipy.interpolate import interp1d
-from . import load_data
-
-
-def check_processed_cache(year, grand_prix, driver, segment=None):
-    """Return a cached processed payload for a driver if it exists.
-
-    The cache key uses year, grand prix, segment, and driver abbreviation.
-    Returns the cached payload dict, or None when the file is missing.
-    """
-    project_root = Path(__file__).resolve().parent.parent
-    cache_dir = project_root / "data" / "processed"
-
-    # Accept either a driver string or a driver payload dict
-    if isinstance(driver, dict):
-        driver_key = driver.get("Driver") or driver.get("driver") or driver.get("Abbreviation") or driver.get("abbr")
-    else:
-        driver_key = driver
-
-    gp = str(grand_prix).strip().replace(" ", "_").lower()
-    seg = segment if segment is not None else "session"
-    key = f"{year}_{gp}_{seg}_{driver_key}"
-    out_path = cache_dir / f"{key}.pkl"
-
-    if out_path.exists():
-        return pd.read_pickle(out_path)
-
-    return None
-
-def save_lap_cache(year, grand_prix, driver, processed_data, segment=None):
-    """Persist a driver's processed payload to the processed cache.
-
-    The cache key uses year, grand prix, segment, and driver abbreviation.
-    Returns the output path after the payload is saved successfully.
-    """
-    
-    project_root = Path(__file__).resolve().parent.parent
-    cache_dir = project_root / "data" / "processed"
-    gp = str(grand_prix).strip().replace(" ", "_").lower()
-    seg = segment if segment is not None else "session"
-    key = f"{year}_{gp}_{seg}_{driver}"
-    out_path = cache_dir / f"{key}.pkl"
-
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Saving processed payload to {out_path}")
-    pd.to_pickle(processed_data, out_path)
-    print(f"Saved: {out_path}")
-
-    return out_path
-
-
-def load_processed_data(driver_1, driver_2, year, grand_prix, segment):
-    lap_1 = check_processed_cache(year, grand_prix, driver_1, segment)
-    lap_2 = check_processed_cache(year, grand_prix, driver_2, segment)
-    print(f"\nProcessed data for {year} {grand_prix} {driver_1} and {driver_2} found in cache.")
-    print(f"Driver 1: {lap_1['Driver']}, Driver 2: {lap_2['Driver']}, Segment: {segment}")
-    return lap_1, lap_2
-
-
-def save_processed_data(year, grand_prix, team, lap_1, lap_2, segment):
-    driver_1 = lap_1.get("Driver")
-    driver_2 = lap_2.get("Driver")
-    save_lap_cache(year, grand_prix, driver_1, lap_1, segment)
-    save_lap_cache(year, grand_prix, driver_2, lap_2, segment)
-    print(f"\nProcessed data for {year} {grand_prix} {team} saved to cache.")
-    print(f"Driver 1: {driver_1}, Driver 2: {driver_2}, Segment: {segment}")
+from .load_save_data import *
     
 
 def preprocess_telemetry(telemetry):
@@ -98,6 +32,8 @@ def preprocess_telemetry(telemetry):
     
     # Convert Brake column to integer type
     preprocessed_telemetry["Brake"] = preprocessed_telemetry["Brake"].astype(int)
+    
+    preprocessed_telemetry["RPM"] = preprocessed_telemetry["RPM"].astype(int)
     
     # Convert Time to seconds since the start of the lap
     preprocessed_telemetry["Time"] = (preprocessed_telemetry["Time"] - preprocessed_telemetry["Time"].iloc[0]).dt.total_seconds()
@@ -170,8 +106,8 @@ def preprocess_teammates_data(year, grand_prix, segment, driver1_data, driver2_d
     - Tuple with both preprocessed payloads.
     """
     
-    preprocessed_driver1_data = check_processed_cache(year, grand_prix, driver1_data, segment)
-    preprocessed_driver2_data = check_processed_cache(year, grand_prix, driver2_data, segment)
+    preprocessed_driver1_data = load_driver_cache(year, grand_prix, driver1_data, segment)
+    preprocessed_driver2_data = load_driver_cache(year, grand_prix, driver2_data, segment)
     
     if preprocessed_driver1_data is not None and preprocessed_driver2_data is not None:
         return preprocessed_driver1_data, preprocessed_driver2_data
@@ -280,5 +216,8 @@ def interpolate_telemetry(d1_telemetry,d2_telemetry, n_points=1000):
 
         d1_interpolated[column] = d1_interpolator(distance).astype(int)
         d2_interpolated[column] = d2_interpolator(distance).astype(int)
+        
+    d1_interpolated["RPM"] = d1_interpolated["RPM"].astype(int)
+    d2_interpolated["RPM"] = d2_interpolated["RPM"].astype(int)
 
     return d1_interpolated, d2_interpolated

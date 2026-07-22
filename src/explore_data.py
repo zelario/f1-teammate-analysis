@@ -1,7 +1,5 @@
-import numpy as np
-import pandas as pd
-from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, driver_1= None, driver_2= None, ):
@@ -112,4 +110,148 @@ def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, va
     plt.xticks(ticks=turns['Distance'], labels=turns['Number'])
     plt.xlabel("Turn Number")
 
+    plt.show()
+    
+
+# Feature analysis functions
+
+def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2, turns, feature, ylabel=None):
+
+    comparison = turns[["Number"]].rename(columns={"Number": "Turn"})
+
+    comparison = comparison.merge(
+        lap_1_feature[["Turn", feature]],
+        on="Turn",
+        how="left"
+    )
+
+    comparison = comparison.merge(
+        lap_2_feature[["Turn", feature]],
+        on="Turn",
+        how="left",
+        suffixes=(f"_{driver_1}", f"_{driver_2}")
+    )
+
+    x = np.arange(len(comparison))
+    width = 0.35
+
+    plt.figure(figsize=(10, 5))
+
+    plt.bar(
+        x - width / 2,
+        comparison[f"{feature}_{driver_1}"],
+        width,
+        label=driver_1
+    )
+
+    plt.bar(
+        x + width / 2,
+        comparison[f"{feature}_{driver_2}"],
+        width,
+        label=driver_2
+    )
+
+    plt.xticks(x, comparison["Turn"])
+
+    plt.xlabel("Turn")
+
+    if ylabel is not None:
+        plt.ylabel(ylabel)
+
+    plt.title(feature.replace("_", " "))
+
+    plt.legend()
+
+    plt.grid(axis="y", alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
+    
+    
+def barplot_feature_delta(lap_1_feature, lap_2_feature, driver_1, driver_2, turns, feature, ylabel=None):
+
+    comparison = turns[["Number"]].rename(columns={"Number": "Turn"})
+
+    comparison = comparison.merge(
+        lap_1_feature[["Turn", feature]],
+        on="Turn",
+        how="left"
+    )
+
+    comparison = comparison.merge(
+        lap_2_feature[["Turn", feature]],
+        on="Turn",
+        how="left",
+        suffixes=(f"_{driver_1}", f"_{driver_2}")
+    )
+
+    comparison["Delta"] = (
+        comparison[f"{feature}_{driver_1}"]
+        - comparison[f"{feature}_{driver_2}"]
+    )
+
+    plt.figure(figsize=(10, 4))
+
+    plt.axhline(0, color="black", linewidth=1)
+
+    plt.bar(
+        comparison["Turn"],
+        comparison["Delta"]
+    )
+
+    plt.xlabel("Turn")
+
+    if ylabel is not None:
+        plt.ylabel(ylabel)
+
+    plt.title(f"{feature} ({driver_1} - {driver_2})")
+
+    plt.xticks(comparison["Turn"])
+
+    plt.grid(axis="y", alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
+    
+
+def scatterplot_features_relationship(lap_1_feature, lap_2_feature, driver_1, driver_2, x_feature, y_feature):
+
+    plt.figure(figsize=(7, 6))
+
+    plt.scatter(
+        lap_1_feature[x_feature],
+        lap_1_feature[y_feature],
+        label=driver_1,
+        s=70
+    )
+
+    plt.scatter(
+        lap_2_feature[x_feature],
+        lap_2_feature[y_feature],
+        label=driver_2,
+        s=70
+    )
+
+    for _, row in lap_1_feature.iterrows():
+        plt.text(
+            row[x_feature],
+            row[y_feature],
+            str(int(row["Turn"]))
+        )
+
+    for _, row in lap_2_feature.iterrows():
+        plt.text(
+            row[x_feature],
+            row[y_feature],
+            str(int(row["Turn"]))
+        )
+
+    plt.xlabel(x_feature)
+    plt.ylabel(y_feature)
+
+    plt.legend()
+
+    plt.grid(alpha=0.3)
+
+    plt.tight_layout()
     plt.show()
