@@ -91,10 +91,11 @@ def analyze_braking_zones(telemetry, turns, braking_distance=300):
             "BrakingDuration": (zone["Time"].iloc[-1] - zone["Time"].iloc[0]),
             "BrakingDistance": (zone["Distance"].iloc[-1] - zone["Distance"].iloc[0]),
         })
-        
+
     braking_zones = pd.DataFrame(braking_zones).reset_index(drop=True)
 
     # Assign braking zones to turns
+
     assigned_zones = []
     used_indices = set()
 
@@ -105,13 +106,10 @@ def analyze_braking_zones(telemetry, turns, braking_distance=300):
 
         distances = turn_distance - braking_zones["StartDistance"]
 
-        valid_zones = braking_zones[
-            (distances >= 0)
-            & (distances <= braking_distance)
-            & (~braking_zones.index.isin(used_indices))
-        ]
+        valid_zones = braking_zones[(distances >= 0) & (distances <= braking_distance) & (~braking_zones.index.isin(used_indices))]
 
         if valid_zones.empty:
+
             continue
 
         closest_idx = (turn_distance - valid_zones["StartDistance"]).idxmin()
@@ -120,23 +118,41 @@ def analyze_braking_zones(telemetry, turns, braking_distance=300):
 
         braking_zone["Turn"] = turn_number
 
-        braking_zone["BrakingPoint"] = (
-            turn_distance - braking_zone["StartDistance"]
-        )
+        braking_zone["BrakingPoint"] = turn_distance - braking_zone["StartDistance"]
 
-        assigned_zones.append(braking_zone)
+        assigned_zones.append(braking_zone.to_dict())
+
         used_indices.add(closest_idx)
+
+    assigned_turns = set(
+        zone["Turn"]
+        for zone in assigned_zones
+    )
+
+    for _, turn in turns.iterrows():
+
+        turn_number = turn["Number"]
+
+        if turn_number in assigned_turns:
+
+            continue
+
+        assigned_zones.append({
+            "Turn": turn_number,
+            "StartDistance": 0,
+            "EndDistance": 0,
+            "BrakingDuration": 0,
+            "BrakingDistance": 0,
+            "BrakingPoint": 0
+        })
 
     assigned_zones_df = pd.DataFrame(assigned_zones).reset_index(drop=True)
 
-    assigned_zones_df = assigned_zones_df[
-        ["Turn"] + [
-            column for column in assigned_zones_df.columns
-            if column != "Turn"
-        ]
-    ]
+    assigned_zones_df = assigned_zones_df[["Turn"] + [column for column in assigned_zones_df.columns if column != "Turn"]]
 
     assigned_zones_df["Turn"] = assigned_zones_df["Turn"].astype(int)
+    
+    assigned_zones_df = assigned_zones_df.sort_values("Turn").reset_index(drop=True)
 
     return assigned_zones_df
 
@@ -209,9 +225,7 @@ def analyze_gear_shifts(telemetry, turns):
 
     gear_changes = telemetry["nGear"].diff()
 
-    telemetry["GearChange"] = (
-        gear_changes.abs() >= 1
-    )
+    telemetry["GearChange"] = (gear_changes.abs() >= 1)
 
     segment_features = []
 
@@ -224,65 +238,27 @@ def analyze_gear_shifts(telemetry, turns):
         start_distance = segment_distances[i]
 
         if i < len(segment_distances) - 1:
-
             end_distance = segment_distances[i + 1]
 
         else:
-
             end_distance = float("inf")
 
-        segment_telemetry = telemetry[
-            (telemetry["Distance"] >= start_distance)
-            & (telemetry["Distance"] < end_distance)
-        ]
+        segment_telemetry = telemetry[(telemetry["Distance"] >= start_distance)& (telemetry["Distance"] < end_distance)]
 
         if segment_telemetry.empty:
-
             continue
 
-        segment_shifts = segment_telemetry[
-            segment_telemetry["GearChange"]
-        ]
+        segment_shifts = segment_telemetry[segment_telemetry["GearChange"]]
 
         segment_features.append({
             "Turn": turn_number,
-
-            "NumberOfShifts": (
-                segment_shifts["GearChange"]
-                .sum()
-            ),
-
-            "LowestGear": (
-                segment_telemetry["nGear"]
-                .min()
-            ),
-
-            "HighestGear": (
-                segment_telemetry["nGear"]
-                .max()
-            ),
-
-            "MinimumRPM": (
-                segment_telemetry["RPM"]
-                .min()
-            ),
-
-            "MaximumRPM": (
-                segment_telemetry["RPM"]
-                .max()
-            ),
-
-            "MeanRPM": (
-                segment_telemetry["RPM"]
-                .mean()
-            ),
-
-            "StdRPM": (
-                segment_telemetry["RPM"]
-                .std()
-            )
+            "NumberOfShifts": (segment_shifts["GearChange"].sum()),
+            "LowestGear": (segment_telemetry["nGear"].min()),
+            "HighestGear": (segment_telemetry["nGear"].max()),
+            "MinimumRPM": (segment_telemetry["RPM"].min()),
+            "MaximumRPM": (segment_telemetry["RPM"].max()),
+            "MeanRPM": (segment_telemetry["RPM"].mean()),
+            "StdRPM": (segment_telemetry["RPM"].std())
         })
 
-    return pd.DataFrame(
-        segment_features
-    ).reset_index(drop=True)
+    return pd.DataFrame(segment_features).reset_index(drop=True)

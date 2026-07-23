@@ -395,44 +395,118 @@ def scatterplot_shift_rpm(gear_shifts, driver, turns):
     plt.show()
     
     
-def scatterplot_features_relationship(lap_1_feature, lap_2_feature, driver_1, driver_2, x_feature, y_feature):
+def scatterplot_features_relationship(
+    lap_1,
+    lap_2,
+    driver_1,
+    driver_2,
+    x_dataframe,
+    x_feature,
+    y_dataframe,
+    y_feature
+):
+
+    x_comparison = lap_1[x_dataframe][
+        ["Turn", x_feature]
+    ].merge(
+        lap_2[x_dataframe][
+            ["Turn", x_feature]
+        ],
+        on="Turn",
+        suffixes=(
+            f"_{driver_1}",
+            f"_{driver_2}"
+        )
+    )
+
+    y_comparison = lap_1[y_dataframe][
+        ["Turn", y_feature]
+    ].merge(
+        lap_2[y_dataframe][
+            ["Turn", y_feature]
+        ],
+        on="Turn",
+        suffixes=(
+            f"_{driver_1}",
+            f"_{driver_2}"
+        )
+    )
+
+    comparison = x_comparison.merge(
+        y_comparison,
+        on="Turn"
+    )
+
+    comparison["DeltaX"] = (
+        comparison[
+            f"{x_feature}_{driver_1}"
+        ]
+        -
+        comparison[
+            f"{x_feature}_{driver_2}"
+        ]
+    )
+
+    comparison["DeltaY"] = (
+        comparison[
+            f"{y_feature}_{driver_1}"
+        ]
+        -
+        comparison[
+            f"{y_feature}_{driver_2}"
+        ]
+    )
 
     plt.figure(figsize=(7, 6))
 
     plt.scatter(
-        lap_1_feature[x_feature],
-        lap_1_feature[y_feature],
-        label=driver_1,
-        s=70
+        comparison["DeltaX"],
+        comparison["DeltaY"],
+        s=150,
+        color="skyblue"
     )
 
-    plt.scatter(
-        lap_2_feature[x_feature],
-        lap_2_feature[y_feature],
-        label=driver_2,
-        s=70
+    for _, row in comparison.iterrows():
+
+        plt.text(
+            row["DeltaX"],
+            row["DeltaY"],
+            str(int(row["Turn"])),
+            ha="center",
+            va="center"
+        )
+
+    plt.axhline(
+        0,
+        color="black",
+        linewidth=1
     )
 
-    for _, row in lap_1_feature.iterrows():
-        plt.text(
-            row[x_feature],
-            row[y_feature],
-            str(int(row["Turn"]))
-        )
+    plt.axvline(
+        0,
+        color="black",
+        linewidth=1
+    )
 
-    for _, row in lap_2_feature.iterrows():
-        plt.text(
-            row[x_feature],
-            row[y_feature],
-            str(int(row["Turn"]))
-        )
+    plt.xlabel(
+        f"Delta {x_feature.replace('_', ' ')} "
+        f"({driver_1} - {driver_2})"
+    )
 
-    plt.xlabel(x_feature)
-    plt.ylabel(y_feature)
+    plt.ylabel(
+        f"Delta {y_feature.replace('_', ' ')} "
+        f"({driver_1} - {driver_2})"
+    )
 
-    plt.legend()
+    plt.title(
+        f"Delta {y_feature.replace('_', ' ')} vs "
+        f"Delta {x_feature.replace('_', ' ')}"
+    )
 
-    plt.grid(alpha=0.3)
+    plt.grid(
+        alpha=0.3
+    )
 
     plt.tight_layout()
+
     plt.show()
