@@ -235,6 +235,166 @@ def barplot_feature_delta(lap_1_feature, lap_2_feature, driver_1, driver_2, turn
     plt.show()
     
 
+def scatterplot_gear_shifts(gear_shifts, driver, turns):
+
+    plt.figure(figsize=(12, 5))
+
+    upshifts = gear_shifts[
+        gear_shifts["Direction"] == "up"
+    ]
+
+    downshifts = gear_shifts[
+        gear_shifts["Direction"] == "down"
+    ]
+
+    plt.scatter(
+        upshifts["Distance"],
+        upshifts["GearTo"],
+        label="Upshift",
+        marker="^",
+        s=70,
+        color="green"
+    )
+
+    plt.scatter(
+        downshifts["Distance"],
+        downshifts["GearTo"],
+        label="Downshift",
+        marker="v",
+        s=70,
+        color="red"
+    )
+
+    plt.xticks(
+        turns["Distance"],
+        turns["Number"]
+    )
+
+    plt.yticks(
+        range(1, 9)
+    )
+
+    plt.xlabel("Turn")
+
+    plt.ylabel("Gear")
+
+    plt.title(
+        f"Gear Shifts - {driver}"
+    )
+
+    plt.legend()
+
+    plt.grid(
+        alpha=0.3
+    )
+
+    plt.tight_layout()
+
+    plt.show()
+
+def scatterplot_shift_rpm(gear_shifts, driver, turns):
+
+    plt.figure(figsize=(14, 8))
+
+    for _, shift in gear_shifts.iterrows():
+
+        if shift["Direction"] == "up":
+
+            color = "green"
+            marker = "^"
+
+        else:
+
+            color = "red"
+            marker = "v"
+
+        plt.plot(
+            [shift["Distance"], shift["Distance"]],
+            [shift["RPMbefore"], shift["RPMafter"]],
+            color=color,
+            alpha=0.5,
+            linewidth=1
+        )
+
+        plt.scatter(
+            shift["Distance"],
+            shift["RPMbefore"],
+            color=color,
+            marker=marker,
+            s=70
+        )
+
+        plt.scatter(
+            shift["Distance"],
+            shift["RPMafter"],
+            facecolors="none",
+            edgecolors=color,
+            marker=marker,
+            s=70
+        )
+
+    plt.xticks(
+        turns["Distance"],
+        turns["Number"]
+    )
+
+    plt.ylim(
+        7000,
+        13000
+    )
+
+    plt.xlabel("Turn")
+
+    plt.ylabel("RPM")
+
+    plt.title(
+        f"RPM Before and After Gear Shifts - {driver}"
+    )
+
+    plt.scatter(
+        [],
+        [],
+        color="green",
+        marker="^",
+        label="Upshift"
+    )
+
+    plt.scatter(
+        [],
+        [],
+        color="red",
+        marker="v",
+        label="Downshift"
+    )
+
+    plt.scatter(
+        [],
+        [],
+        color="black",
+        marker="^",
+        label="RPM Before"
+    )
+
+    plt.scatter(
+        [],
+        [],
+        facecolors="none",
+        edgecolors="black",
+        marker="^",
+        label="RPM After"
+    )
+
+    plt.legend()
+
+    plt.grid(
+        alpha=0.3
+    )
+
+    plt.tight_layout()
+
+    plt.show()
+    
+    
 def scatterplot_features_relationship(lap_1_feature, lap_2_feature, driver_1, driver_2, x_feature, y_feature):
 
     plt.figure(figsize=(7, 6))

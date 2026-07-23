@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 def analyze_speed_metrics(telemetry, turns, entry_distance=50, exit_distance=50, minimum_speed_window=50):
 
@@ -202,49 +203,86 @@ def analyze_throttle_segments(telemetry, turns, full_throttle_threshold=95):
     return throttle_features_df
 
 
-def analyze_gear_shifts(telemetry):
+def analyze_gear_shifts(telemetry, turns):
 
     telemetry = telemetry.reset_index(drop=True)
 
     gear_changes = telemetry["nGear"].diff()
 
-    shift_indices = gear_changes[gear_changes.abs() >= 1].index
+    telemetry["GearChange"] = (
+        gear_changes.abs() >= 1
+    )
 
-    if shift_indices.empty:
-        return pd.DataFrame()
+    segment_features = []
 
-    shifts = []
+    segment_distances = [0] + turns["Distance"].tolist()
 
-    for idx in shift_indices:
+    for i in range(len(segment_distances)):
 
-        if idx == 0:
+        turn_number = i
+
+        start_distance = segment_distances[i]
+
+        if i < len(segment_distances) - 1:
+
+            end_distance = segment_distances[i + 1]
+
+        else:
+
+            end_distance = float("inf")
+
+        segment_telemetry = telemetry[
+            (telemetry["Distance"] >= start_distance)
+            & (telemetry["Distance"] < end_distance)
+        ]
+
+        if segment_telemetry.empty:
+
             continue
 
-        after_shift = telemetry.loc[idx]
-        before_shift = telemetry.loc[idx - 1]
+        segment_shifts = segment_telemetry[
+            segment_telemetry["GearChange"]
+        ]
 
-        change = after_shift["nGear"] - before_shift["nGear"]
+        segment_features.append({
+            "Turn": turn_number,
 
-        direction = "up" if change > 0 else "down"
+            "NumberOfShifts": (
+                segment_shifts["GearChange"]
+                .sum()
+            ),
 
-        rpm_change = after_shift["RPM"] - before_shift["RPM"]
+            "LowestGear": (
+                segment_telemetry["nGear"]
+                .min()
+            ),
 
-        shifts.append({
-            "Distance": after_shift["Distance"],
-            "Direction": direction,
-            "GearFrom": before_shift["nGear"],
-            "GearTo": after_shift["nGear"],
-            "RPMbefore": before_shift["RPM"],
-            "RPMafter": after_shift["RPM"],
-            "RPMChange": rpm_change,
+            "HighestGear": (
+                segment_telemetry["nGear"]
+                .max()
+            ),
+
+            "MinimumRPM": (
+                segment_telemetry["RPM"]
+                .min()
+            ),
+
+            "MaximumRPM": (
+                segment_telemetry["RPM"]
+                .max()
+            ),
+
+            "MeanRPM": (
+                segment_telemetry["RPM"]
+                .mean()
+            ),
+
+            "StdRPM": (
+                segment_telemetry["RPM"]
+                .std()
+            )
         })
 
-    shifts_df = pd.DataFrame(shifts).reset_index(drop=True)
-
-    shifts_df["GearFrom"] = shifts_df["GearFrom"].astype(int)
-    shifts_df["GearTo"] = shifts_df["GearTo"].astype(int)
-    shifts_df["RPMbefore"] = shifts_df["RPMbefore"].astype(int)
-    shifts_df["RPMafter"] = shifts_df["RPMafter"].astype(int)
-    shifts_df["RPMChange"] = shifts_df["RPMChange"].astype(int)
-
-    return shifts_df
+    return pd.DataFrame(
+        segment_features
+    ).reset_index(drop=True)
