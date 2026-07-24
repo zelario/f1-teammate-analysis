@@ -1,6 +1,6 @@
 import pandas as pd
 
-def analyze_speed_metrics(telemetry, turns, entry_distance=50, exit_distance=50, minimum_speed_window=50):
+def analyze_speed_metrics(lap, turns, entry_distance=50, exit_distance=50, minimum_speed_window=50):
     """Analyzes speed metrics around each turn, including entry, minimum, and exit speeds.
 
     This function processes telemetry data to calculate key speed-related features for each
@@ -19,6 +19,8 @@ def analyze_speed_metrics(telemetry, turns, entry_distance=50, exit_distance=50,
         pandas.DataFrame: A DataFrame with columns 'Turn', 'EntrySpeed', 'MinimumSpeed', and 'ExitSpeed'
                           for each turn.
     """
+    
+    telemetry = lap["Telemetry"]
 
     telemetry = telemetry.reset_index(drop=True)
 
@@ -90,7 +92,7 @@ def analyze_speed_metrics(telemetry, turns, entry_distance=50, exit_distance=50,
     return corner_features_df
 
 
-def analyze_braking_zones(telemetry, turns, braking_distance=300):
+def analyze_braking_zones(lap, turns, braking_distance=300):
     """Identifies and analyzes braking zones, assigning them to the nearest turn.
 
     This function detects periods of braking from telemetry data, characterizes each
@@ -108,7 +110,7 @@ def analyze_braking_zones(telemetry, turns, braking_distance=300):
                           'StartDistance', 'EndDistance', 'BrakingDuration', 'BrakingDistance', and 'BrakingPoint'.
     """
 
-    telemetry = telemetry.reset_index(drop=True)
+    telemetry = lap["Telemetry"].reset_index(drop=True)
 
     is_braking = telemetry["Brake"] > 0
 
@@ -190,7 +192,7 @@ def analyze_braking_zones(telemetry, turns, braking_distance=300):
     return assigned_zones_df
 
 
-def analyze_throttle_segments(telemetry, turns, full_throttle_threshold=95):
+def analyze_throttle_segments(lap, turns, full_throttle_threshold=95):
     """Analyzes throttle application in segments between turns.
 
     This function divides the lap into segments based on turn locations and calculates
@@ -208,7 +210,7 @@ def analyze_throttle_segments(telemetry, turns, full_throttle_threshold=95):
                           and 'FullThrottlePercentage' for each segment.
     """
 
-    telemetry = telemetry.reset_index(drop=True)
+    telemetry = lap["Telemetry"].reset_index(drop=True)
 
     turns = turns.copy()
 
@@ -266,7 +268,7 @@ def analyze_throttle_segments(telemetry, turns, full_throttle_threshold=95):
     return throttle_features_df
 
 
-def analyze_gear_shifts(telemetry, turns):
+def analyze_gear_shifts(lap, turns):
     """Analyzes gear shifting patterns and RPM metrics within each track segment.
 
     This function segments the lap based on turn locations and calculates various metrics
@@ -282,7 +284,7 @@ def analyze_gear_shifts(telemetry, turns):
                           'HighestGear', 'MinimumRPM', 'MaximumRPM', 'MeanRPM', and 'StdRPM'.
     """
 
-    telemetry = telemetry.reset_index(drop=True)
+    telemetry = lap["Telemetry"].reset_index(drop=True)
 
     gear_changes = telemetry["nGear"].diff()
 

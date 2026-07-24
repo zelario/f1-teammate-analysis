@@ -31,12 +31,8 @@ def choose_color(driver):
 
     return colors.get(driver, "black")  # Default to black if driver not found
 
-def save_plot_as_png(plt, filename):
-    path = f"visualizations/{filename}.png"
-    plt.savefig(path, format='png', bbox_inches='tight')  # Save the figure as a PNG file
 
-
-def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, driver_1= None, driver_2= None, y_unit=None):
+def plot_variable_comparison(lap_1, lap_2, variable, turns, y_unit=None):
     """Plots a specified telemetry variable against distance for two drivers.
 
     This function generates a line plot comparing a chosen telemetry variable (e.g., Speed, RPM)
@@ -58,6 +54,11 @@ def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, 
         y_unit (str, optional): The unit of the variable being plotted (e.g., "km/h", "RPM").
                                  Appears in the y-axis label. Defaults to None.
     """
+    
+    lap_1_telemetry = lap_1["Telemetry"]
+    lap_2_telemetry = lap_2["Telemetry"]
+    driver_1 = lap_1["Driver"]
+    driver_2 = lap_2["Driver"]
 
     title = f"{variable} of {driver_1} and {driver_2} throughout the lap"
 
@@ -94,9 +95,11 @@ def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, 
     plt.xticks(ticks=turns['Distance'], labels=turns['Number'])
     plt.xlabel("Turn Number")
 
+    fig = plt.gcf()
     plt.show()
+    return fig
 
-def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, variable, turns, y_unit=None):
+def plot_variable_delta(lap_1, lap_2, variable, turns, y_unit=None):
     """Plots the difference in a telemetry variable between two drivers against distance.
 
     This function calculates the delta (difference) of a specified telemetry variable
@@ -117,6 +120,11 @@ def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, va
         y_unit (str, optional): The unit of the variable being plotted (e.g., "km/h", "%").
                                  Appears in the y-axis label. Defaults to None.
     """
+    
+    lap_1_telemetry = lap_1["Telemetry"]
+    lap_2_telemetry = lap_2["Telemetry"]
+    driver_1 = lap_1["Driver"]
+    driver_2 = lap_2["Driver"]
 
     delta_variable = lap_1_telemetry[variable] - lap_2_telemetry[variable]
 
@@ -140,13 +148,11 @@ def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, va
     plt.xticks(ticks=turns['Distance'], labels=turns['Number'])
     plt.xlabel("Turn Number")
 
+    fig = plt.gcf()
     plt.show()
+    return fig
 
-
-# Feature analysis functions
-
-
-def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2, turns, feature, y_unit=None, include_zero=False):
+def barplot_feature_comparison(lap_1, lap_2, dataframe_name, feature, turns, y_unit=None, include_zero=False):
     """Generates a bar plot comparing a specific feature between two drivers.
 
     This function creates a grouped bar chart to compare a chosen feature (e.g., speed, brake)
@@ -154,12 +160,15 @@ def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2,
     segment for comparison.
 
     Parameters:
-        lap_1_feature (pandas.DataFrame): Feature data for the first driver.
-                                         Must contain 'Turn' and the specified `feature` columns.
-        lap_2_feature (pandas.DataFrame): Feature data for the second driver.
-                                         Must contain 'Turn' and the specified `feature` columns.
-        driver_1 (str): The abbreviation of the first driver. Used for plot labels and color.
-        driver_2 (str): The abbreviation of the second driver. Used for plot labels and color.
+        lap_1 (dict): A dictionary containing the first driver's data, including 'Telemetry' and 'Driver' keys.
+        lap_2 (dict): A dictionary containing the second driver's data, including 'Telemetry' and 'Driver' keys.
+        data (pandas.DataFrame): The combined telemetry data for both drivers.
+        feature (str): The name of the feature column to plot on the y-axis.
+        turns (pandas.DataFrame): DataFrame containing turn information, expected to have 'Number' column.
+        y_unit (str, optional): The unit of the feature being plotted (e.g., "km/h", "%").
+                                 Appears in the y-axis label. Defaults to None.
+        include_zero (bool, optional): If True, includes a 'zero' segment in the comparison.
+                                       Defaults to False.
         turns (pandas.DataFrame): DataFrame containing turn information, expected to have 'Number'
                                   column.
         feature (str): The name of the feature column to plot on the y-axis.
@@ -168,6 +177,11 @@ def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2,
         include_zero (bool, optional): If True, includes a 'zero' segment in the comparison.
                                        Defaults to False.
     """
+    
+    lap_1_feature = lap_1[dataframe_name]
+    lap_2_feature = lap_2[dataframe_name]
+    driver_1 = lap_1["Driver"]
+    driver_2 = lap_2["Driver"]
 
     turn_numbers = turns["Number"].tolist()
 
@@ -229,10 +243,13 @@ def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2,
     plt.grid(axis="y", alpha=0.3)
 
     plt.tight_layout()
+    
+    fig = plt.gcf()
     plt.show()
+    return fig
     
     
-def barplot_feature_delta(lap_1_feature, lap_2_feature, driver_1, driver_2, turns, feature, y_unit=None, include_zero=False):
+def barplot_feature_delta(lap_1, lap_2, dataframe_name, feature, turns, y_unit=None, include_zero=False):
     """Generates a bar plot showing the delta of a specific feature between two drivers.
 
     This function calculates the difference (delta) of a chosen feature between two drivers
@@ -255,6 +272,11 @@ def barplot_feature_delta(lap_1_feature, lap_2_feature, driver_1, driver_2, turn
         include_zero (bool, optional): If True, includes a 'zero' segment in the comparison.
                                        Defaults to False.
     """
+    
+    lap_1_feature = lap_1[dataframe_name]
+    lap_2_feature = lap_2[dataframe_name]
+    driver_1 = lap_1["Driver"]
+    driver_2 = lap_2["Driver"]
 
     turn_numbers = turns["Number"].tolist()
 
@@ -308,10 +330,13 @@ def barplot_feature_delta(lap_1_feature, lap_2_feature, driver_1, driver_2, turn
     plt.grid(axis="y", alpha=0.3)
 
     plt.tight_layout()
+    
+    fig = plt.gcf()
     plt.show()
+    return fig
     
 
-def scatterplot_gear_shifts(gear_shifts, driver, turns):
+def scatterplot_gear_shifts(lap, turns):
     """Generates a scatter plot visualizing gear shifts throughout a lap.
 
     This function plots upshifts and downshifts against distance, indicating the gear
@@ -324,6 +349,9 @@ def scatterplot_gear_shifts(gear_shifts, driver, turns):
         turns (pandas.DataFrame): DataFrame containing turn information, expected to have 'Number'
                                   and 'Distance' columns. These distances are used for x-axis ticks.
     """
+    
+    gear_shifts = lap["GearShifts"]
+    driver = lap["Driver"]
 
     plt.figure(figsize=(12, 5))
 
@@ -378,9 +406,11 @@ def scatterplot_gear_shifts(gear_shifts, driver, turns):
 
     plt.tight_layout()
 
+    fig = plt.gcf()
     plt.show()
+    return fig
 
-def scatterplot_shift_rpm(gear_shifts, driver, turns):
+def scatterplot_shift_rpm(lap, turns):
     """Generates a scatter plot showing RPM before and after gear shifts.
 
     This function visualizes the change in RPM during upshifts and downshifts,
@@ -394,6 +424,9 @@ def scatterplot_shift_rpm(gear_shifts, driver, turns):
         turns (pandas.DataFrame): DataFrame containing turn information, expected to have 'Number'
                                   and 'Distance' columns. These distances are used for x-axis ticks.
     """
+
+    gear_shifts = lap["GearShifts"]
+    driver = lap["Driver"]
 
     plt.figure(figsize=(14, 8))
 
@@ -493,10 +526,12 @@ def scatterplot_shift_rpm(gear_shifts, driver, turns):
 
     plt.tight_layout()
 
+    fig = plt.gcf()
     plt.show()
+    return fig
     
     
-def scatterplot_features_relationship(lap_1, lap_2, driver_1, driver_2, x_dataframe, x_feature, y_dataframe, y_feature):
+def scatterplot_features_relationship(lap_1, lap_2, x_dataframe, x_feature, y_dataframe, y_feature):
     """Generates a scatter plot to visualize the relationship between the deltas of two features.
 
     This function compares two different features between two drivers, calculates the delta
@@ -518,6 +553,9 @@ def scatterplot_features_relationship(lap_1, lap_2, driver_1, driver_2, x_datafr
                            corresponds to the dataframe containing `y_feature`.
         y_feature (str): The name of the feature from `y_dataframe` to be used on the y-axis.
     """
+    
+    driver_1 = lap_1["Driver"]
+    driver_2 = lap_2["Driver"]
 
     x_comparison = lap_1[x_dataframe][
         ["Turn", x_feature]
@@ -622,12 +660,13 @@ def scatterplot_features_relationship(lap_1, lap_2, driver_1, driver_2, x_datafr
 
     plt.tight_layout()
 
+    fig = plt.gcf()
     plt.show()
-    
-    
+    return fig
+
 # Performance comparison functions
 
-def analyze_segment_times(telemetry, turns):
+def analyze_segment_times(lap, turns):
     """Analyzes and calculates the time spent in each segment between turns.
 
     This function takes telemetry data and turn information to calculate the time duration
@@ -642,6 +681,8 @@ def analyze_segment_times(telemetry, turns):
         pandas.DataFrame: A DataFrame with columns 'Turn', 'StartDistance', 'EndDistance', and 'SegmentTime',
                           representing the time taken for each segment.
     """
+    
+    telemetry = lap["Telemetry"]
 
     telemetry = telemetry.reset_index(drop=True)
 
@@ -687,6 +728,84 @@ def analyze_segment_times(telemetry, turns):
         segment_times
     ).reset_index(drop=True)
     
+    
+def barplot_segment_times_comparison(segment_times_1, segment_times_2, driver_1, driver_2, turns):
+    """Generates a bar plot comparing segment times between two drivers.
+
+    This function visualizes the time spent by two drivers in each segment of the track,
+    defined by the turns, using a grouped bar chart.
+
+    Parameters:
+        segment_times_1 (pandas.DataFrame): Segment times data for the first driver.
+                                            Must contain 'Turn' and 'SegmentTime' columns.
+        segment_times_2 (pandas.DataFrame): Segment times data for the second driver.
+                                            Must contain 'Turn' and 'SegmentTime' columns.
+        driver_1 (str): The abbreviation of the first driver. Used for plot labels.
+        driver_2 (str): The abbreviation of the second driver. Used for plot labels.
+        turns (pandas.DataFrame): DataFrame containing turn information, expected to have 'Number' column.
+
+    Returns:
+        matplotlib.figure.Figure: The matplotlib figure object containing the plot.
+    """
+    
+    turn_numbers = [0] + turns["Number"].tolist()
+
+    comparison = pd.DataFrame({
+        "Turn": turn_numbers
+    })
+
+    comparison = comparison.merge(
+        segment_times_1[["Turn", "SegmentTime"]],
+        on="Turn",
+        how="left"
+    )
+
+    comparison = comparison.merge(
+        segment_times_2[["Turn", "SegmentTime"]],
+        on="Turn",
+        how="left",
+        suffixes=(f"_{driver_1}", f"_{driver_2}")
+    )
+
+    x = np.arange(len(comparison))
+    width = 0.35
+
+    plt.figure(figsize=(10, 5))
+
+    plt.bar(
+        x - width / 2,
+        comparison[f"SegmentTime_{driver_1}"],
+        width,
+        label=driver_1,
+        color=choose_color(driver_1)
+    )
+
+    plt.bar(
+        x + width / 2,
+        comparison[f"SegmentTime_{driver_2}"],
+        width,
+        label=driver_2,
+        color=choose_color(driver_2)
+    )
+
+    plt.xticks(x, comparison["Turn"])
+
+    plt.xlabel("Turn")
+
+    plt.ylabel("Segment Time (s)")
+
+    plt.title("Segment Times Comparison")
+
+    plt.legend()
+
+    plt.grid(axis="y", alpha=0.3)
+
+    plt.tight_layout()
+
+    fig = plt.gcf()
+    plt.show()
+    
+    return fig
 
 def barplot_segment_time_delta(segment_times_1, segment_times_2, driver_1, driver_2, turns):
     """Generates a bar plot showing the time delta for each track segment between two drivers.
@@ -705,7 +824,7 @@ def barplot_segment_time_delta(segment_times_1, segment_times_2, driver_1, drive
                                   column.
 
     Returns:
-        list: A list of the calculated time deltas for each segment.
+        tuple: A tuple containing a list of the calculated time deltas for each segment and the matplotlib figure object.
     """
 
     turn_numbers = [0] + turns["Number"].tolist()
@@ -766,6 +885,7 @@ def barplot_segment_time_delta(segment_times_1, segment_times_2, driver_1, drive
 
     plt.tight_layout()
 
+    fig = plt.gcf()
     plt.show()
 
-    return comparison["Delta"].tolist()
+    return comparison["Delta"].tolist(), fig

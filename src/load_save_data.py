@@ -356,6 +356,34 @@ def load_teammates_data(year, grand_prix, segment, driver1, driver2):
 
     return p1, p2
 
+def save_figure(fig,data_type,type,variable,year,grand_prix,team,driver1,driver2):
+
+    try:
+
+        project_root = Path(__file__).resolve().parent.parent
+
+        plots_dir = (
+            project_root
+            / "visualizations"
+            / str(year)
+            / str(grand_prix).strip().replace(" ", "_").lower()
+            / team
+            / data_type
+        )
+
+        plots_dir.mkdir(parents=True, exist_ok=True)
+
+        plot_file_name = (f"{driver1}_{driver2}_{variable}_{type}.png")
+
+        plot_path = plots_dir / plot_file_name
+
+        fig.savefig(plot_path,bbox_inches="tight")
+
+    except Exception as e:
+        print(
+            f"Error saving figure: {plot_path}. "
+            f"Exception: {e}"
+        )
 
 
 if __name__ == "__main__":
