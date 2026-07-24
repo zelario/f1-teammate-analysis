@@ -30,8 +30,6 @@ To investigate this, the project analyses differences in:
 The project follows a modular data analysis pipeline:
 
 ```text
-Data Collection
-      ↓
 Data Preparation
       ↓
 Data Exploration

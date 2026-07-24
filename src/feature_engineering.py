@@ -206,8 +206,6 @@ def analyze_throttle_segments(telemetry, turns, full_throttle_threshold=95):
 
         throttle_features.append({
             "Turn": turn["Number"],
-            "StartDistance": start_distance,
-            "EndDistance": end_distance,
             "MeanThrottle": throttle.mean(),
             "StdThrottle": throttle.std(),
             "FullThrottlePercentage": (full_throttle.mean() * 100)

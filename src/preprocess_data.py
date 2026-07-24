@@ -118,35 +118,9 @@ def preprocess_teammates_data(year, grand_prix, segment, driver1_data, driver2_d
     return preprocessed_driver1_data, preprocessed_driver2_data
 
 
-def interpolate_telemetry(d1_telemetry,d2_telemetry, n_points=1000):
-    """
-    Interpolate two drivers' telemetry onto a common distance grid.
-
-    Continuous variables are linearly interpolated.
-    Discrete variables use nearest-neighbor interpolation.
-
-    Parameters
-    ----------
-    d1_telemetry : pandas.DataFrame
-        First driver's telemetry data.
-
-    d2_telemetry : pandas.DataFrame
-        Second driver's telemetry data.
-
-    n_points : int, default=1000
-        Number of points in the common distance grid.
-
-    Returns
-    -------
-    d1_interpolated : pandas.DataFrame
-        First driver's interpolated telemetry.
-
-    d2_interpolated : pandas.DataFrame
-        Second driver's interpolated telemetry.
-    """
+def interpolate_telemetry(telemetry_1, telemetry_2, lap_time_1, lap_time_2, n_points=1000):
 
     continuous_columns = [
-        "Time",
         "Speed",
         "RPM",
         "Throttle"
@@ -157,67 +131,83 @@ def interpolate_telemetry(d1_telemetry,d2_telemetry, n_points=1000):
         "Brake"
     ]
 
-    # Find the distance range shared by both drivers
-    min_distance = max(
-        d1_telemetry["Distance"].min(),
-        d2_telemetry["Distance"].min()
-    )
+    telemetry_1 = telemetry_1.sort_values("Distance").reset_index(drop=True).copy()
+    telemetry_2 = telemetry_2.sort_values("Distance").reset_index(drop=True).copy()
 
+    telemetry_1["Distance"] -= telemetry_1["Distance"].iloc[0]
+    telemetry_2["Distance"] -= telemetry_2["Distance"].iloc[0]
+
+    telemetry_1["Time"] -= telemetry_1["Time"].iloc[0]
+    telemetry_2["Time"] -= telemetry_2["Time"].iloc[0]
+
+    telemetry_1["Time"] = telemetry_1["Time"] / telemetry_1["Time"].iloc[-1] * lap_time_1
+    telemetry_2["Time"] = telemetry_2["Time"] / telemetry_2["Time"].iloc[-1] * lap_time_2
+    
     max_distance = min(
-        d1_telemetry["Distance"].max(),
-        d2_telemetry["Distance"].max()
+        telemetry_1["Distance"].max(),
+        telemetry_2["Distance"].max()
     )
 
-    # Create a common distance grid
-    distance = np.linspace(
-        min_distance,
-        max_distance,
-        n_points
-    )
+    distance = np.linspace(0, max_distance, n_points)
 
-    # Create the output DataFrames
-    d1_interpolated = pd.DataFrame({
-        "Distance": distance
-    })
+    d1_interpolated = pd.DataFrame({"Distance": distance})
+    d2_interpolated = pd.DataFrame({"Distance": distance})
 
-    d2_interpolated = pd.DataFrame({
-        "Distance": distance
-    })
-
-    # Linearly interpolate continuous variables
     for column in continuous_columns:
+        d1_interpolated[column] = np.interp(distance, telemetry_1["Distance"], telemetry_1[column])
+        d2_interpolated[column] = np.interp(distance, telemetry_2["Distance"], telemetry_2[column])
 
-        d1_interpolated[column] = np.interp(
-            distance,
-            d1_telemetry["Distance"],
-            d1_telemetry[column]
-        )
-
-        d2_interpolated[column] = np.interp(
-            distance,
-            d2_telemetry["Distance"],
-            d2_telemetry[column]
-        )
-
-    # Use nearest-neighbor interpolation for discrete variables
     for column in discrete_columns:
-
-        d1_interpolator = interp1d(
-            d1_telemetry["Distance"],
-            d1_telemetry[column],
-            kind="nearest"
-        )
-
-        d2_interpolator = interp1d(
-            d2_telemetry["Distance"],
-            d2_telemetry[column],
-            kind="nearest"
-        )
+        d1_interpolator = interp1d(telemetry_1["Distance"], telemetry_1[column], kind="nearest")
+        d2_interpolator = interp1d(telemetry_2["Distance"], telemetry_2[column], kind="nearest")
 
         d1_interpolated[column] = d1_interpolator(distance).astype(int)
         d2_interpolated[column] = d2_interpolator(distance).astype(int)
-        
+
     d1_interpolated["RPM"] = d1_interpolated["RPM"].astype(int)
     d2_interpolated["RPM"] = d2_interpolated["RPM"].astype(int)
+
+    #Time: own axis (fraction of the lap), not the common physical distance
+    telemetry_1["Fraction"] = telemetry_1["Distance"] / telemetry_1["Distance"].iloc[-1]
+    telemetry_2["Fraction"] = telemetry_2["Distance"] / telemetry_2["Distance"].iloc[-1]
+
+    fraction_grid = np.linspace(0, 1, n_points)
+
+    d1_interpolated["Time"] = np.interp(fraction_grid, telemetry_1["Fraction"], telemetry_1["Time"])
+    d2_interpolated["Time"] = np.interp(fraction_grid, telemetry_2["Fraction"], telemetry_2["Time"])
+    
+    
+    # Final check: ensure that the final distances and times match the expected lap times and distances
+    distance_1_final = telemetry_1["Distance"].iloc[-1]
+    distance_2_final = telemetry_2["Distance"].iloc[-1]
+    diff = abs(distance_1_final - distance_2_final)
+
+    time_1_final = d1_interpolated["Time"].iloc[-1]
+    time_2_final = d2_interpolated["Time"].iloc[-1]
+
+    delta_final = time_1_final - time_2_final
+    delta_expected = lap_time_1 - lap_time_2
+
+    print("\nInterpolation check:")
+    print(f"Total distance driver 1: {distance_1_final:.3f} m")
+    print(f"Total distance driver 2: {distance_2_final:.3f} m")
+    print(f"Difference: {diff:.3f} m")
+    print(f"Percentage difference: {diff / max(distance_1_final, distance_2_final) * 100:.3f}%")
+
+
+    if diff < 1.0:
+        print("OK: distances near, alignment is a very close.")
+    else:
+        print("WARNING: distances differ noticeably, Time/Distance alignment is off.")
+
+    print(f"\nTime 1 (interpolated): {time_1_final:.4f}  |  LapTime 1: {lap_time_1:.4f}")
+    print(f"Time 2 (interpolated): {time_2_final:.4f}  |  LapTime 2: {lap_time_2:.4f}")
+    print(f"Delta (calculated): {delta_final:.4f}")
+    print(f"Delta (expected):   {delta_expected:.4f}")
+
+    if abs(delta_final - delta_expected) < 1e-6:
+        print("OK: final delta matches the official lap time gap.")
+    else:
+        print("WARNING: final delta does not match the official lap time gap.")
 
     return d1_interpolated, d2_interpolated

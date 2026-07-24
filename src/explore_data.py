@@ -2,6 +2,37 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+def choose_color(driver):
+    """
+    Choose a color based on the driver's abbreviation.
+
+    Parameters
+    ----------
+    driver : str
+        Driver's abbreviation.
+
+    Returns
+    -------
+    str
+        Color associated with the driver.
+    """
+
+    colors = {
+        "VER": "midnightblue",
+        "TSU": "firebrick",
+        "LEC": "red",
+        "HAM": "yellow",
+        "NOR": "darkorange",
+        "PIA": "gray",
+        "RUS": "darkturquoise",
+        "ANT": "indianred",
+        "ALO": "seagreen",
+        "STR": "dimgray",
+    }
+
+    return colors.get(driver, "black")  # Default to black if driver not found
+    
+
 def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, driver_1= None, driver_2= None, y_unit=None):
     """
     Plot a telemetry variable against distance for two drivers.
@@ -36,7 +67,7 @@ def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, 
             lap_1_telemetry["Distance"],
             lap_1_telemetry[variable],
             label=driver_1,
-            color="green",
+            color=choose_color(driver_1),
             alpha=1,
             linewidth=0.8
         )
@@ -46,7 +77,7 @@ def plot_variable_comparison(lap_1_telemetry, lap_2_telemetry, variable, turns, 
             lap_2_telemetry["Distance"],
             lap_2_telemetry[variable],
             label=driver_2,
-            color="red",
+            color=choose_color(driver_2),
             alpha=1,
             linewidth=0.8
         )
@@ -109,9 +140,10 @@ def plot_variable_delta(lap_1_telemetry, lap_2_telemetry, driver_1, driver_2, va
     plt.xlabel("Turn Number")
 
     plt.show()
-    
+
 
 # Feature analysis functions
+
 
 def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2, turns, feature, y_unit=None, include_zero=False):
 
@@ -148,7 +180,7 @@ def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2,
         comparison[f"{feature}_{driver_1}"],
         width,
         label=driver_1,
-        color="green"
+        color=choose_color(driver_1)
     )
 
     plt.bar(
@@ -156,7 +188,7 @@ def barplot_feature_comparison(lap_1_feature, lap_2_feature, driver_1, driver_2,
         comparison[f"{feature}_{driver_2}"],
         width,
         label=driver_2,
-        color="gray"
+        color=choose_color(driver_2)
     )
 
     plt.xticks(x, comparison["Turn"])
@@ -510,3 +542,117 @@ def scatterplot_features_relationship(
     plt.tight_layout()
 
     plt.show()
+    
+    
+# Performance comparison functions
+
+def analyze_segment_times(telemetry, turns):
+
+    telemetry = telemetry.reset_index(drop=True)
+
+    segment_distances = [0] + turns["Distance"].tolist()
+
+    segment_times = []
+
+    for i in range(len(segment_distances)):
+
+        turn_number = i
+
+        start_distance = segment_distances[i]
+
+        if i < len(segment_distances) - 1:
+
+            end_distance = segment_distances[i + 1]
+
+        else:
+
+            end_distance = float("inf")
+
+        segment_telemetry = telemetry[
+            (telemetry["Distance"] >= start_distance)
+            & (telemetry["Distance"] < end_distance)
+        ]
+
+        if segment_telemetry.empty:
+
+            continue
+
+        start_time = segment_telemetry["Time"].iloc[0]
+
+        end_time = segment_telemetry["Time"].iloc[-1]
+
+        segment_times.append({
+            "Turn": turn_number,
+            "StartDistance": start_distance,
+            "EndDistance": end_distance,
+            "SegmentTime": end_time - start_time
+        })
+
+    return pd.DataFrame(
+        segment_times
+    ).reset_index(drop=True)
+    
+
+def barplot_segment_time_delta(segment_times_1, segment_times_2, driver_1, driver_2, turns):
+
+    turn_numbers = [0] + turns["Number"].tolist()
+
+    comparison = pd.DataFrame({
+        "Turn": turn_numbers
+    })
+
+    comparison = comparison.merge(
+        segment_times_1[["Turn", "SegmentTime"]],
+        on="Turn",
+        how="left"
+    )
+
+    comparison = comparison.merge(
+        segment_times_2[["Turn", "SegmentTime"]],
+        on="Turn",
+        how="left",
+        suffixes=(f"_{driver_1}", f"_{driver_2}")
+    )
+
+    comparison["Delta"] = (
+        comparison[f"SegmentTime_{driver_1}"]
+        -
+        comparison[f"SegmentTime_{driver_2}"]
+    )
+
+    plt.figure(figsize=(10, 4))
+
+    plt.axhline(
+        0,
+        color="black",
+        linewidth=1
+    )
+
+    plt.bar(
+        comparison["Turn"],
+        comparison["Delta"],
+        color="skyblue"
+    )
+
+    plt.xlabel("Turn")
+
+    plt.ylabel("Time Delta (s)")
+
+    plt.title(
+        f"Segment Time Delta ({driver_1} - {driver_2})"
+    )
+
+    plt.xticks(
+        comparison["Turn"]
+    )
+
+    plt.grid(
+        axis="y",
+        alpha=0.3
+    )
+
+    plt.tight_layout()
+
+    plt.show()
+
+    return comparison["Delta"].tolist()
