@@ -3,11 +3,26 @@ import pandas as pd
 from pathlib import Path
 
 def load_driver_cache(year, grand_prix, driver, segment=None):
-    """Return a cached payload for a driver if it exists.
+    """Loads a driver's cached data payload from a pickle file.
 
-    The cache key uses year, grand prix, segment, and driver abbreviation.
-    Returns the cached payload dict, or None when the file is missing.
+    This function attempts to load a pre-saved data payload for a specific driver,
+    event, and session segment from the local cache (`/data` directory). The cache
+    file is identified by a key constructed from the year, Grand Prix name, segment,
+    and driver abbreviation.
+
+    Parameters:
+        year (int): The year of the Grand Prix.
+        grand_prix (str): The name of the Grand Prix (e.g., "Japanese Grand Prix").
+        driver (str or dict): The driver's abbreviation (e.g., "VER") or a dictionary
+                              containing driver information.
+        segment (str, optional): The session segment (e.g., "Q1", "Q2", "Q3").
+                                 Defaults to "session".
+
+    Returns:
+        dict or None: The loaded data payload as a dictionary if the cache file exists,
+                      otherwise None.
     """
+    
     project_root = Path(__file__).resolve().parent.parent
     cache_dir = project_root / "data"
 
@@ -28,10 +43,22 @@ def load_driver_cache(year, grand_prix, driver, segment=None):
     return None
 
 def save_driver_cache(year, grand_prix, driver, data_payload, segment=None):
-    """Persist a driver's data payload to the cache.
+    """Persists a driver's data payload to a pickle file in the local cache.
 
-    The cache key uses year, grand prix, segment, and driver abbreviation.
-    Returns the output path after the payload is saved successfully.
+    This function serializes and saves the driver's telemetry and metadata payload
+    into the `/data` directory. The cache file name is structured using the year,
+    Grand Prix name, session segment, and driver abbreviation.
+
+    Parameters:
+        year (int): The year of the Grand Prix.
+        grand_prix (str): The name of the Grand Prix (e.g., "Japanese Grand Prix").
+        driver (str): The driver's abbreviation (e.g., "VER").
+        data_payload (dict): The dictionary containing telemetry and metadata to be cached.
+        segment (str, optional): The session segment (e.g., "Q1", "Q2", "Q3").
+                                 Defaults to "session".
+
+    Returns:
+        Path: The absolute path to the newly created cache file.
     """
     
     project_root = Path(__file__).resolve().parent.parent
@@ -50,6 +77,24 @@ def save_driver_cache(year, grand_prix, driver, data_payload, segment=None):
 
 
 def load_cache(year, grand_prix, segment, driver_1, driver_2):
+    """Loads cached data payloads for both teammates in a specific session.
+
+    This function attempts to load the cached data payloads for two drivers for a
+    given year, Grand Prix, and segment. If either driver's cached payload is
+    missing, it returns a tuple of (None, None).
+
+    Parameters:
+        year (int): The year of the Grand Prix.
+        grand_prix (str): The name of the Grand Prix (e.g., "Japanese Grand Prix").
+        segment (str): The session segment (e.g., "Q1", "Q2", "Q3").
+        driver_1 (str): The first driver's abbreviation (e.g., "VER").
+        driver_2 (str): The second driver's abbreviation (e.g., "PER").
+
+    Returns:
+        tuple (dict or None, dict or None): A tuple containing the data payloads of
+                                            driver_1 and driver_2 respectively. Both
+                                            elements are None if either is not cached.
+    """
     
     lap_1 = load_driver_cache(year, grand_prix, driver_1, segment)
     lap_2 = load_driver_cache(year, grand_prix, driver_2, segment)
@@ -64,6 +109,22 @@ def load_cache(year, grand_prix, segment, driver_1, driver_2):
 
 
 def save_cache(year, grand_prix, segment, lap_1, lap_2):
+    """Persists the data payloads for both teammates to the cache.
+
+    This function extracts the driver abbreviations from each lap data dictionary
+    and invokes `save_driver_cache` to serialize and save the payloads for both
+    teammates under the designated session segment.
+
+    Parameters:
+        year (int): The year of the Grand Prix.
+        grand_prix (str): The name of the Grand Prix (e.g., "Japanese Grand Prix").
+        segment (str): The session segment (e.g., "Q1", "Q2", "Q3").
+        lap_1 (dict): The data payload for the first driver, including 'Driver' key.
+        lap_2 (dict): The data payload for the second driver, including 'Driver' key.
+
+    Returns:
+        None
+    """
     driver_1 = lap_1.get("Driver")
     driver_2 = lap_2.get("Driver")
     save_driver_cache(year, grand_prix, driver_1, lap_1, segment)
@@ -72,9 +133,19 @@ def save_cache(year, grand_prix, segment, lap_1, lap_2):
     print(f"Driver 1: {driver_1}, Driver 2: {driver_2}, Segment: {segment}")
 
 def get_drivers(session, team):
-    """Return the two drivers for a team in a session.
+    """Retrieves the abbreviations of the two drivers competing for a team.
 
-    Returns a tuple of (driver1, driver2).
+    This function searches the session results to identify and return the two
+    drivers associated with the specified team.
+
+    Parameters:
+        session (fastf1.core.Session): The active FastF1 session object.
+        team (str): The name of the team (e.g., "Red Bull Racing").
+
+    Returns:
+        tuple (str or None, str or None): A tuple containing the abbreviations of the two
+                                          drivers (e.g., ("VER", "PER")). Elements can be
+                                          None if the team has fewer than two drivers.
     """
     
     try:
@@ -92,9 +163,19 @@ def get_drivers(session, team):
     return driver1, driver2
 
 def get_segment(session, driver1, driver2):
-    """Find the best shared segment (Q3 > Q2 > Q1) for both teammates in a session.
+    """Identifies the highest shared session segment completed by both teammates.
 
-    Returns the segment name (e.g., 'Q3') or None if no shared segment is found.
+    This function checks qualifying results to determine the best segment (Q3, Q2,
+    or Q1) that both driver1 and driver2 have registered times in.
+
+    Parameters:
+        session (fastf1.core.Session): The active FastF1 session object.
+        driver1 (str): The first driver's abbreviation (e.g., "VER").
+        driver2 (str): The second driver's abbreviation (e.g., "PER").
+
+    Returns:
+        str or None: The name of the highest shared segment (e.g., "Q3"), or None
+                     if no shared segment is found.
     """
 
     try:
@@ -118,6 +199,19 @@ def get_segment(session, driver1, driver2):
 
 
 def get_turns(session):
+    """Extracts and sorts the circuit corner/turn information for a session.
+
+    This function retrieves the circuit details from the session, extracts the corner
+    numbers and their respective distances from the start/finish line, and sorts
+    them in ascending order of distance.
+
+    Parameters:
+        session (fastf1.core.Session): The active FastF1 session object.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing sorted 'Number' and 'Distance' columns
+                          for all corners on the circuit.
+    """
     
     circuit_info = session.get_circuit_info()
 
@@ -133,16 +227,27 @@ def get_turns(session):
 
 
 def load_driver_data(year, grand_prix, driver, segment, session=None, results=None):
-    """Load telemetry and metadata for a single driver.
+    """Loads and compiles telemetry and metadata for a single driver's lap.
 
-    Behavior:
-    - Select a single lap for the driver in the qualifying session.
-    - If `segment` (e.g. 'Q3') and `results` are provided, try to match the segment time among the driver's laps.
-    - Otherwise, fall back to the driver's fastest lap.
-    - Build payload: {LapTime, LapStartTime, TyreCompound, TyreAge, telemetry}
-    - Save the payload to `data/{year}_{grand_prix_safe}_{segment}_{DRIVER}.pkl`.
+    This function retrieves qualifying lap telemetry and metadata for a driver.
+    If a segment and results are provided, it matches the driver's lap closest
+    to their recorded segment time. Otherwise, it falls back to their fastest
+    lap. It then returns a payload dict containing telemetry, lap time, compound,
+    and tire age details.
 
-    Returns the payload dict, cached or freshly built.
+    Parameters:
+        year (int): The year of the Grand Prix.
+        grand_prix (str): The name of the Grand Prix (e.g., "Japanese Grand Prix").
+        driver (str): The driver's abbreviation (e.g., "VER").
+        segment (str): The session segment (e.g., "Q1", "Q2", "Q3").
+        session (fastf1.core.Session, optional): A loaded FastF1 session object.
+                                                 If None, it is fetched and loaded.
+        results (pandas.DataFrame, optional): Session results DataFrame. If None,
+                                              retrieved from the loaded session.
+
+    Returns:
+        dict: A dictionary containing 'Driver', 'LapTime', 'LapStartTime',
+              'TyreCompound', 'TyreAge', and 'Telemetry' (DataFrame).
     """
 
     project_root = Path(__file__).resolve().parent.parent
@@ -214,13 +319,22 @@ def load_driver_data(year, grand_prix, driver, segment, session=None, results=No
 
 
 def load_teammates_data(year, grand_prix, segment, driver1, driver2):
-    """Load qualifying payloads for both teammates.
+    """Loads qualifying data payloads for both teammates, utilizing cache if available.
 
-    The function first checks the unprocessed cache for both drivers using the
-    provided segment. If either payload is missing, it loads the qualifying
-    session and builds the payloads with `load_driver_data`.
+    This function first attempts to load cached payloads for both drivers. If either
+    is missing, it loads the qualifying session, fetches the results, and compiles
+    the payloads using `load_driver_data`.
 
-    Returns a tuple with both payload dicts.
+    Parameters:
+        year (int): The year of the Grand Prix.
+        grand_prix (str): The name of the Grand Prix (e.g., "Japanese Grand Prix").
+        segment (str): The session segment (e.g., "Q1", "Q2", "Q3").
+        driver1 (str): The first driver's abbreviation (e.g., "VER").
+        driver2 (str): The second driver's abbreviation (e.g., "PER").
+
+    Returns:
+        tuple (dict, dict): A tuple containing the compiled or cached data payloads for
+                            driver1 and driver2 respectively.
     """
     
     driver1_data = load_driver_cache(year, grand_prix, driver1, segment=segment)

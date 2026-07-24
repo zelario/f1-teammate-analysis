@@ -5,17 +5,19 @@ from .load_save_data import *
     
 
 def preprocess_telemetry(telemetry):
-    """Select and clean the telemetry columns used for analysis.
+    """Selects and cleans the telemetry columns used for teammate analysis.
 
-    Parameters
-    ----------
-    telemetry : pandas.DataFrame
-        Raw telemetry data for a single lap.
+    This function extracts a set of relevant telemetry columns (Time, Speed, RPM,
+    nGear, Throttle, Brake, Distance) from the raw lap telemetry, casts discrete
+    variables to proper types, converts Time to total seconds elapsed since the
+    beginning of the lap, and removes missing or duplicated time records.
 
-    Returns
-    -------
-    pandas.DataFrame
-        Cleaned telemetry with only the relevant columns.
+    Parameters:
+        telemetry (pandas.DataFrame): Raw telemetry data for a single lap from FastF1.
+
+    Returns:
+        pandas.DataFrame: Cleaned and structured telemetry containing only the
+                          processed columns of interest.
     """
 
     relevant_columns = [
@@ -51,10 +53,11 @@ def preprocess_driver_data(driver_data):
     """Normalize a driver's payload into analysis-ready values.
 
     Parameters:
-    - driver_data: dict containing driver telemetry data and metadata.
+        driver_data (dict): Dictionary containing driver telemetry data and 
+                            metadata.
 
     Returns:
-    - dict containing the cleaned driver metadata and telemetry.
+        dict: Dictionary containing the cleaned driver metadata and telemetry.
     """
     
     preprocessed_data = {}
@@ -99,11 +102,14 @@ def preprocess_teammates_data(year, grand_prix, segment, driver1_data, driver2_d
     """Preprocess both teammates' payloads.
 
     Parameters:
-    - driver1_data: first driver's payload.
-    - driver2_data: second driver's payload.
+        year (int): The year of the race.
+        grand_prix (str): The name or ID of the Grand Prix.
+        segment (str): The session segment (e.g., 'Race').
+        driver1_data (dict): First driver's payload.
+        driver2_data (dict): Second driver's payload.
 
     Returns:
-    - Tuple with both preprocessed payloads.
+        tuple: A tuple containing both preprocessed payloads (driver1, driver2).
     """
     
     preprocessed_driver1_data = load_driver_cache(year, grand_prix, driver1_data, segment)
@@ -119,6 +125,19 @@ def preprocess_teammates_data(year, grand_prix, segment, driver1_data, driver2_d
 
 
 def interpolate_telemetry(telemetry_1, telemetry_2, lap_time_1, lap_time_2, n_points=1000):
+    """Interpolates telemetry data between two drivers to a common distance/fraction grid.
+
+    Parameters:
+        telemetry_1 (pandas.DataFrame): Telemetry data for the first driver.
+        telemetry_2 (pandas.DataFrame): Telemetry data for the second driver.
+        lap_time_1 (float): Total lap time for the first driver in seconds.
+        lap_time_2 (float): Total lap time for the second driver in seconds.
+        n_points (int, optional): Number of points for interpolation. 
+                                  Defaults to 1000.
+
+    Returns:
+        tuple: A tuple containing the interpolated telemetry DataFrames for both drivers.
+    """
 
     continuous_columns = [
         "Speed",

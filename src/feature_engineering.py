@@ -1,7 +1,24 @@
 import pandas as pd
-import numpy as np
 
 def analyze_speed_metrics(telemetry, turns, entry_distance=50, exit_distance=50, minimum_speed_window=50):
+    """Analyzes speed metrics around each turn, including entry, minimum, and exit speeds.
+
+    This function processes telemetry data to calculate key speed-related features for each
+    turn. It determines the speed at a specified distance before the turn (entry speed),
+    the minimum speed within a window around the turn, and the speed at a specified
+    distance after the turn (exit speed).
+
+    Parameters:
+        telemetry (pandas.DataFrame): Telemetry data for a lap, must include 'Distance' and 'Speed' columns.
+        turns (pandas.DataFrame): DataFrame with turn information, must include 'Number' and 'Distance' columns.
+        entry_distance (int, optional): The distance before the turn to measure entry speed. Defaults to 50.
+        exit_distance (int, optional): The distance after the turn to measure exit speed. Defaults to 50.
+        minimum_speed_window (int, optional): The window size around the turn to find the minimum speed. Defaults to 50.
+
+    Returns:
+        pandas.DataFrame: A DataFrame with columns 'Turn', 'EntrySpeed', 'MinimumSpeed', and 'ExitSpeed'
+                          for each turn.
+    """
 
     telemetry = telemetry.reset_index(drop=True)
 
@@ -74,6 +91,22 @@ def analyze_speed_metrics(telemetry, turns, entry_distance=50, exit_distance=50,
 
 
 def analyze_braking_zones(telemetry, turns, braking_distance=300):
+    """Identifies and analyzes braking zones, assigning them to the nearest turn.
+
+    This function detects periods of braking from telemetry data, characterizes each
+    braking zone by its start/end distance and duration, and then assigns each zone to
+    the closest preceding turn within a specified distance.
+
+    Parameters:
+        telemetry (pandas.DataFrame): Telemetry data for a lap, must include 'Distance', 'Brake', and 'Time' columns.
+        turns (pandas.DataFrame): DataFrame with turn information, must include 'Number' and 'Distance' columns.
+        braking_distance (int, optional): The maximum distance before a turn to consider a braking zone as
+                                          associated with that turn. Defaults to 300.
+
+    Returns:
+        pandas.DataFrame: A DataFrame with detailed information for each braking zone, including the assigned 'Turn',
+                          'StartDistance', 'EndDistance', 'BrakingDuration', 'BrakingDistance', and 'BrakingPoint'.
+    """
 
     telemetry = telemetry.reset_index(drop=True)
 
@@ -158,6 +191,22 @@ def analyze_braking_zones(telemetry, turns, braking_distance=300):
 
 
 def analyze_throttle_segments(telemetry, turns, full_throttle_threshold=95):
+    """Analyzes throttle application in segments between turns.
+
+    This function divides the lap into segments based on turn locations and calculates
+    throttle-related metrics for each segment. These metrics include mean throttle,
+    standard deviation of throttle, and the percentage of time spent at full throttle.
+
+    Parameters:
+        telemetry (pandas.DataFrame): Telemetry data for a lap, must include 'Distance' and 'Throttle' columns.
+        turns (pandas.DataFrame): DataFrame with turn information, must include 'Number' and 'Distance' columns.
+        full_throttle_threshold (int, optional): The throttle percentage to be considered as full throttle.
+                                                 Defaults to 95.
+
+    Returns:
+        pandas.DataFrame: A DataFrame with columns 'Turn', 'MeanThrottle', 'StdThrottle',
+                          and 'FullThrottlePercentage' for each segment.
+    """
 
     telemetry = telemetry.reset_index(drop=True)
 
@@ -218,6 +267,20 @@ def analyze_throttle_segments(telemetry, turns, full_throttle_threshold=95):
 
 
 def analyze_gear_shifts(telemetry, turns):
+    """Analyzes gear shifting patterns and RPM metrics within each track segment.
+
+    This function segments the lap based on turn locations and calculates various metrics
+    related to gear shifts and RPM within each segment. This includes the number of shifts,
+    lowest and highest gears used, and statistics about RPM (min, max, mean, std).
+
+    Parameters:
+        telemetry (pandas.DataFrame): Telemetry data for a lap, must include 'Distance', 'nGear', and 'RPM' columns.
+        turns (pandas.DataFrame): DataFrame with turn information, must include 'Distance' column.
+
+    Returns:
+        pandas.DataFrame: A DataFrame with columns for each segment's 'Turn', 'NumberOfShifts', 'LowestGear',
+                          'HighestGear', 'MinimumRPM', 'MaximumRPM', 'MeanRPM', and 'StdRPM'.
+    """
 
     telemetry = telemetry.reset_index(drop=True)
 
