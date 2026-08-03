@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.interpolate import interp1d
 from .load_save_data import *
-    
+
 
 def preprocess_telemetry(telemetry):
     """Selects and cleans the telemetry columns used for teammate analysis.
@@ -31,18 +31,22 @@ def preprocess_telemetry(telemetry):
     ]
 
     preprocessed_telemetry = telemetry[relevant_columns].copy()
-    
+
     # Convert Brake column to integer type
     preprocessed_telemetry["Brake"] = preprocessed_telemetry["Brake"].astype(int)
-    
+
     preprocessed_telemetry["RPM"] = preprocessed_telemetry["RPM"].astype(int)
-    
+
     # Convert Time to seconds since the start of the lap
-    preprocessed_telemetry["Time"] = (preprocessed_telemetry["Time"] - preprocessed_telemetry["Time"].iloc[0]).dt.total_seconds()
+    preprocessed_telemetry["Time"] = (
+        preprocessed_telemetry["Time"] - preprocessed_telemetry["Time"].iloc[0]
+    ).dt.total_seconds()
 
     # Remove rows containing missing values and duplicate time entries
     preprocessed_telemetry = preprocessed_telemetry.dropna()
-    preprocessed_telemetry = preprocessed_telemetry.drop_duplicates(subset="Time", keep="first")
+    preprocessed_telemetry = preprocessed_telemetry.drop_duplicates(
+        subset="Time", keep="first"
+    )
 
     preprocessed_telemetry.reset_index(drop=True, inplace=True)
 
@@ -53,50 +57,51 @@ def preprocess_driver_data(driver_data):
     """Normalize a driver's payload into analysis-ready values.
 
     Parameters:
-        driver_data (dict): Dictionary containing driver telemetry data and 
+        driver_data (dict): Dictionary containing driver telemetry data and
                             metadata.
 
     Returns:
         dict: Dictionary containing the cleaned driver metadata and telemetry.
     """
-    
+
     preprocessed_data = {}
 
     # Preserve the driver identifier in the processed payload.
-    preprocessed_data['Driver'] = driver_data.get('Driver')
-    
+    preprocessed_data["Driver"] = driver_data.get("Driver")
+
     # Ensure LapTime is in seconds
-    lap_time_str = driver_data.get('LapTime')
+    lap_time_str = driver_data.get("LapTime")
     if lap_time_str is not None:
         try:
-            preprocessed_data['LapTime'] = pd.to_timedelta(lap_time_str).total_seconds()
+            preprocessed_data["LapTime"] = pd.to_timedelta(lap_time_str).total_seconds()
         except Exception:
-            preprocessed_data['LapTime'] = None
+            preprocessed_data["LapTime"] = None
     else:
-        preprocessed_data['LapTime'] = None
+        preprocessed_data["LapTime"] = None
 
     # Ensure LapStartTime is a timedelta object
-    lap_start_time_str = driver_data.get('LapStartTime')
+    lap_start_time_str = driver_data.get("LapStartTime")
     if lap_start_time_str is not None:
         try:
-            preprocessed_data['LapStartTime'] = pd.to_timedelta(lap_start_time_str)
+            preprocessed_data["LapStartTime"] = pd.to_timedelta(lap_start_time_str)
         except Exception:
-            preprocessed_data['LapStartTime'] = None
+            preprocessed_data["LapStartTime"] = None
     else:
-        preprocessed_data['LapStartTime'] = None
+        preprocessed_data["LapStartTime"] = None
 
     # Copy TyreCompound and TyreAge directly
-    preprocessed_data['TyreCompound'] = driver_data.get('TyreCompound')
-    preprocessed_data['TyreAge'] = driver_data.get('TyreAge').astype(int)
+    preprocessed_data["TyreCompound"] = driver_data.get("TyreCompound")
+    preprocessed_data["TyreAge"] = driver_data.get("TyreAge").astype(int)
 
     # Ensure Telemetry is a DataFrame
-    telemetry = driver_data.get('Telemetry')
+    telemetry = driver_data.get("Telemetry")
     if telemetry is not None and isinstance(telemetry, pd.DataFrame):
-        preprocessed_data['Telemetry'] = preprocess_telemetry(telemetry)
+        preprocessed_data["Telemetry"] = preprocess_telemetry(telemetry)
     else:
-        preprocessed_data['Telemetry'] = pd.DataFrame()
+        preprocessed_data["Telemetry"] = pd.DataFrame()
 
     return preprocessed_data
+
 
 def preprocess_teammates_data(year, grand_prix, segment, driver1_data, driver2_data):
     """Preprocess both teammates' payloads.
@@ -111,10 +116,14 @@ def preprocess_teammates_data(year, grand_prix, segment, driver1_data, driver2_d
     Returns:
         tuple: A tuple containing both preprocessed payloads (driver1, driver2).
     """
-    
-    preprocessed_driver1_data = load_driver_cache(year, grand_prix, driver1_data, segment)
-    preprocessed_driver2_data = load_driver_cache(year, grand_prix, driver2_data, segment)
-    
+
+    preprocessed_driver1_data = load_driver_cache(
+        year, grand_prix, driver1_data, segment
+    )
+    preprocessed_driver2_data = load_driver_cache(
+        year, grand_prix, driver2_data, segment
+    )
+
     if preprocessed_driver1_data is not None and preprocessed_driver2_data is not None:
         return preprocessed_driver1_data, preprocessed_driver2_data
 
@@ -124,7 +133,9 @@ def preprocess_teammates_data(year, grand_prix, segment, driver1_data, driver2_d
     return preprocessed_driver1_data, preprocessed_driver2_data
 
 
-def interpolate_telemetry(telemetry_1, telemetry_2, lap_time_1, lap_time_2, n_points=1000):
+def interpolate_telemetry(
+    telemetry_1, telemetry_2, lap_time_1, lap_time_2, n_points=1000
+):
     """Interpolates telemetry data between two drivers to a common distance/fraction grid.
 
     Parameters:
@@ -132,23 +143,16 @@ def interpolate_telemetry(telemetry_1, telemetry_2, lap_time_1, lap_time_2, n_po
         telemetry_2 (pandas.DataFrame): Telemetry data for the second driver.
         lap_time_1 (float): Total lap time for the first driver in seconds.
         lap_time_2 (float): Total lap time for the second driver in seconds.
-        n_points (int, optional): Number of points for interpolation. 
+        n_points (int, optional): Number of points for interpolation.
                                   Defaults to 1000.
 
     Returns:
         tuple: A tuple containing the interpolated telemetry DataFrames for both drivers.
     """
 
-    continuous_columns = [
-        "Speed",
-        "RPM",
-        "Throttle"
-    ]
+    continuous_columns = ["Speed", "RPM", "Throttle"]
 
-    discrete_columns = [
-        "nGear",
-        "Brake"
-    ]
+    discrete_columns = ["nGear", "Brake"]
 
     telemetry_1 = telemetry_1.sort_values("Distance").reset_index(drop=True).copy()
     telemetry_2 = telemetry_2.sort_values("Distance").reset_index(drop=True).copy()
@@ -159,13 +163,14 @@ def interpolate_telemetry(telemetry_1, telemetry_2, lap_time_1, lap_time_2, n_po
     telemetry_1["Time"] -= telemetry_1["Time"].iloc[0]
     telemetry_2["Time"] -= telemetry_2["Time"].iloc[0]
 
-    telemetry_1["Time"] = telemetry_1["Time"] / telemetry_1["Time"].iloc[-1] * lap_time_1
-    telemetry_2["Time"] = telemetry_2["Time"] / telemetry_2["Time"].iloc[-1] * lap_time_2
-    
-    max_distance = min(
-        telemetry_1["Distance"].max(),
-        telemetry_2["Distance"].max()
+    telemetry_1["Time"] = (
+        telemetry_1["Time"] / telemetry_1["Time"].iloc[-1] * lap_time_1
     )
+    telemetry_2["Time"] = (
+        telemetry_2["Time"] / telemetry_2["Time"].iloc[-1] * lap_time_2
+    )
+
+    max_distance = min(telemetry_1["Distance"].max(), telemetry_2["Distance"].max())
 
     distance = np.linspace(0, max_distance, n_points)
 
@@ -173,12 +178,20 @@ def interpolate_telemetry(telemetry_1, telemetry_2, lap_time_1, lap_time_2, n_po
     d2_interpolated = pd.DataFrame({"Distance": distance})
 
     for column in continuous_columns:
-        d1_interpolated[column] = np.interp(distance, telemetry_1["Distance"], telemetry_1[column])
-        d2_interpolated[column] = np.interp(distance, telemetry_2["Distance"], telemetry_2[column])
+        d1_interpolated[column] = np.interp(
+            distance, telemetry_1["Distance"], telemetry_1[column]
+        )
+        d2_interpolated[column] = np.interp(
+            distance, telemetry_2["Distance"], telemetry_2[column]
+        )
 
     for column in discrete_columns:
-        d1_interpolator = interp1d(telemetry_1["Distance"], telemetry_1[column], kind="nearest")
-        d2_interpolator = interp1d(telemetry_2["Distance"], telemetry_2[column], kind="nearest")
+        d1_interpolator = interp1d(
+            telemetry_1["Distance"], telemetry_1[column], kind="nearest"
+        )
+        d2_interpolator = interp1d(
+            telemetry_2["Distance"], telemetry_2[column], kind="nearest"
+        )
 
         d1_interpolated[column] = d1_interpolator(distance).astype(int)
         d2_interpolated[column] = d2_interpolator(distance).astype(int)
@@ -186,16 +199,19 @@ def interpolate_telemetry(telemetry_1, telemetry_2, lap_time_1, lap_time_2, n_po
     d1_interpolated["RPM"] = d1_interpolated["RPM"].astype(int)
     d2_interpolated["RPM"] = d2_interpolated["RPM"].astype(int)
 
-    #Time: own axis (fraction of the lap), not the common physical distance
+    # Time: own axis (fraction of the lap), not the common physical distance
     telemetry_1["Fraction"] = telemetry_1["Distance"] / telemetry_1["Distance"].iloc[-1]
     telemetry_2["Fraction"] = telemetry_2["Distance"] / telemetry_2["Distance"].iloc[-1]
 
     fraction_grid = np.linspace(0, 1, n_points)
 
-    d1_interpolated["Time"] = np.interp(fraction_grid, telemetry_1["Fraction"], telemetry_1["Time"])
-    d2_interpolated["Time"] = np.interp(fraction_grid, telemetry_2["Fraction"], telemetry_2["Time"])
-    
-    
+    d1_interpolated["Time"] = np.interp(
+        fraction_grid, telemetry_1["Fraction"], telemetry_1["Time"]
+    )
+    d2_interpolated["Time"] = np.interp(
+        fraction_grid, telemetry_2["Fraction"], telemetry_2["Time"]
+    )
+
     # Final check: ensure that the final distances and times match the expected lap times and distances
     distance_1_final = telemetry_1["Distance"].iloc[-1]
     distance_2_final = telemetry_2["Distance"].iloc[-1]
@@ -211,15 +227,18 @@ def interpolate_telemetry(telemetry_1, telemetry_2, lap_time_1, lap_time_2, n_po
     print(f"Total distance driver 1: {distance_1_final:.3f} m")
     print(f"Total distance driver 2: {distance_2_final:.3f} m")
     print(f"Difference: {diff:.3f} m")
-    print(f"Percentage difference: {diff / max(distance_1_final, distance_2_final) * 100:.3f}%")
-
+    print(
+        f"Percentage difference: {diff / max(distance_1_final, distance_2_final) * 100:.3f}%"
+    )
 
     if diff < 1.0:
         print("OK: distances near, alignment is a very close.")
     else:
         print("WARNING: distances differ noticeably, Time/Distance alignment is off.")
 
-    print(f"\nTime 1 (interpolated): {time_1_final:.4f}  |  LapTime 1: {lap_time_1:.4f}")
+    print(
+        f"\nTime 1 (interpolated): {time_1_final:.4f}  |  LapTime 1: {lap_time_1:.4f}"
+    )
     print(f"Time 2 (interpolated): {time_2_final:.4f}  |  LapTime 2: {lap_time_2:.4f}")
     print(f"Delta (calculated): {delta_final:.4f}")
     print(f"Delta (expected):   {delta_expected:.4f}")

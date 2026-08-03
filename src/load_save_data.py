@@ -2,11 +2,12 @@ import fastf1
 import pandas as pd
 from pathlib import Path
 
+
 def load_driver_cache(year, grand_prix, driver, segment=None):
     """Loads a driver's cached data payload from a pickle file.
 
     This function attempts to load a pre-saved data payload for a specific driver,
-    event, and session segment from the local cache (`/data` directory). The cache
+    event, and session segment from the local cache (`/cache` directory). The cache
     file is identified by a key constructed from the year, Grand Prix name, segment,
     and driver abbreviation.
 
@@ -22,13 +23,18 @@ def load_driver_cache(year, grand_prix, driver, segment=None):
         dict or None: The loaded data payload as a dictionary if the cache file exists,
                       otherwise None.
     """
-    
+
     project_root = Path(__file__).resolve().parent.parent
-    cache_dir = project_root / "data"
+    cache_dir = project_root / "cache"
 
     # Accept either a driver string or a driver payload dict
     if isinstance(driver, dict):
-        driver_key = driver.get("Driver") or driver.get("driver") or driver.get("Abbreviation") or driver.get("abbr")
+        driver_key = (
+            driver.get("Driver")
+            or driver.get("driver")
+            or driver.get("Abbreviation")
+            or driver.get("abbr")
+        )
     else:
         driver_key = driver
 
@@ -41,6 +47,7 @@ def load_driver_cache(year, grand_prix, driver, segment=None):
         return pd.read_pickle(out_path)
 
     return None
+
 
 def save_driver_cache(year, grand_prix, driver, data_payload, segment=None):
     """Persists a driver's data payload to a pickle file in the local cache.
@@ -60,9 +67,9 @@ def save_driver_cache(year, grand_prix, driver, data_payload, segment=None):
     Returns:
         Path: The absolute path to the newly created cache file.
     """
-    
+
     project_root = Path(__file__).resolve().parent.parent
-    cache_dir = project_root / "data"
+    cache_dir = project_root / "cache"
     gp = str(grand_prix).strip().replace(" ", "_").lower()
     seg = segment if segment is not None else "session"
     key = f"{year}_{gp}_{seg}_{driver}"
@@ -95,16 +102,20 @@ def load_cache(year, grand_prix, segment, driver_1, driver_2):
                                             driver_1 and driver_2 respectively. Both
                                             elements are None if either is not cached.
     """
-    
+
     lap_1 = load_driver_cache(year, grand_prix, driver_1, segment)
     lap_2 = load_driver_cache(year, grand_prix, driver_2, segment)
-    
+
     if lap_1 is None or lap_2 is None:
         return None, None
-    
-    print(f"\nProcessed data for {year} {grand_prix} {driver_1} and {driver_2} found in cache.")
-    print(f"Driver 1: {lap_1['Driver']}, Driver 2: {lap_2['Driver']}, Segment: {segment}")
-    
+
+    print(
+        f"\nProcessed data for {year} {grand_prix} {driver_1} and {driver_2} found in cache."
+    )
+    print(
+        f"Driver 1: {lap_1['Driver']}, Driver 2: {lap_2['Driver']}, Segment: {segment}"
+    )
+
     return lap_1, lap_2
 
 
@@ -132,6 +143,7 @@ def save_cache(year, grand_prix, segment, lap_1, lap_2):
     print(f"\nProcessed data for {year} {grand_prix} saved to cache.")
     print(f"Driver 1: {driver_1}, Driver 2: {driver_2}, Segment: {segment}")
 
+
 def get_drivers(session, team):
     """Retrieves the abbreviations of the two drivers competing for a team.
 
@@ -147,20 +159,19 @@ def get_drivers(session, team):
                                           drivers (e.g., ("VER", "PER")). Elements can be
                                           None if the team has fewer than two drivers.
     """
-    
+
     try:
         results = session.results
     except Exception:
         results = None
 
-    team_drivers = results[
-        results["TeamName"] == team
-    ]["Abbreviation"].tolist()
+    team_drivers = results[results["TeamName"] == team]["Abbreviation"].tolist()
 
     driver1 = team_drivers[0] if len(team_drivers) > 0 else None
     driver2 = team_drivers[1] if len(team_drivers) > 1 else None
 
     return driver1, driver2
+
 
 def get_segment(session, driver1, driver2):
     """Identifies the highest shared session segment completed by both teammates.
@@ -186,10 +197,14 @@ def get_segment(session, driver1, driver2):
     segment = None
     if results is not None:
         try:
-            r1 = results[results['Abbreviation'] == driver1].squeeze()
-            r2 = results[results['Abbreviation'] == driver2].squeeze()
-            for seg in ['Q3', 'Q2', 'Q1']:
-                if seg in results.columns and pd.notna(r1.get(seg)) and pd.notna(r2.get(seg)):
+            r1 = results[results["Abbreviation"] == driver1].squeeze()
+            r2 = results[results["Abbreviation"] == driver2].squeeze()
+            for seg in ["Q3", "Q2", "Q1"]:
+                if (
+                    seg in results.columns
+                    and pd.notna(r1.get(seg))
+                    and pd.notna(r2.get(seg))
+                ):
                     segment = seg
                     break
         except Exception:
@@ -212,16 +227,12 @@ def get_turns(session):
         pandas.DataFrame: A DataFrame containing sorted 'Number' and 'Distance' columns
                           for all corners on the circuit.
     """
-    
+
     circuit_info = session.get_circuit_info()
 
-    turns = circuit_info.corners[
-        ["Number", "Distance"]
-    ].copy()
+    turns = circuit_info.corners[["Number", "Distance"]].copy()
 
-    turns = turns.sort_values(
-        by="Distance"
-    ).reset_index(drop=True)
+    turns = turns.sort_values(by="Distance").reset_index(drop=True)
 
     return turns
 
@@ -251,7 +262,7 @@ def load_driver_data(year, grand_prix, driver, segment, session=None, results=No
     """
 
     project_root = Path(__file__).resolve().parent.parent
-    cache_dir = project_root / "data"
+    cache_dir = project_root / "cache"
     gp = str(grand_prix).strip().replace(" ", "_").lower()
     seg = segment
     key = f"{year}_{gp}_{seg}_{driver}"
@@ -275,12 +286,12 @@ def load_driver_data(year, grand_prix, driver, segment, session=None, results=No
     lap = None
     if segment is not None and results is not None:
         try:
-            row = results[results['Abbreviation'] == driver].squeeze()
+            row = results[results["Abbreviation"] == driver].squeeze()
             val = row.get(segment)
             if pd.notna(val):
                 target_td = pd.to_timedelta(val)
                 try:
-                    diffs = (driver_laps_all['LapTime'] - target_td).abs()
+                    diffs = (driver_laps_all["LapTime"] - target_td).abs()
                     idx = diffs.idxmin()
                     lap = driver_laps_all.loc[idx]
                 except Exception:
@@ -294,7 +305,7 @@ def load_driver_data(year, grand_prix, driver, segment, session=None, results=No
             lap = driver_laps_all.pick_fastest()
         except Exception:
             try:
-                lap = driver_laps_all.nsmallest(1, 'LapTime').iloc[0]
+                lap = driver_laps_all.nsmallest(1, "LapTime").iloc[0]
             except Exception:
                 try:
                     lap = driver_laps_all.iloc[0]
@@ -307,12 +318,16 @@ def load_driver_data(year, grand_prix, driver, segment, session=None, results=No
     telemetry = lap.get_telemetry()
 
     lap_data = {
-        'Driver': driver,
-        'LapTime': str(lap.get('LapTime')) if 'LapTime' in lap.index else None,
-        'LapStartTime': str(lap.get('Time')) if 'Time' in lap.index else None,
-        'TyreCompound': lap.get('Compound') if 'Compound' in lap.index else lap.get('TyreCompound') if 'TyreCompound' in lap.index else None,
-        'TyreAge': lap.get('TyreLife') if 'TyreLife' in lap.index else None,
-        'Telemetry': telemetry,
+        "Driver": driver,
+        "LapTime": str(lap.get("LapTime")) if "LapTime" in lap.index else None,
+        "LapStartTime": str(lap.get("Time")) if "Time" in lap.index else None,
+        "TyreCompound": (
+            lap.get("Compound")
+            if "Compound" in lap.index
+            else lap.get("TyreCompound") if "TyreCompound" in lap.index else None
+        ),
+        "TyreAge": lap.get("TyreLife") if "TyreLife" in lap.index else None,
+        "Telemetry": telemetry,
     }
 
     return lap_data
@@ -336,13 +351,13 @@ def load_teammates_data(year, grand_prix, segment, driver1, driver2):
         tuple (dict, dict): A tuple containing the compiled or cached data payloads for
                             driver1 and driver2 respectively.
     """
-    
+
     driver1_data = load_driver_cache(year, grand_prix, driver1, segment=segment)
     driver2_data = load_driver_cache(year, grand_prix, driver2, segment=segment)
-    
+
     if driver1_data is not None and driver2_data is not None:
         return driver1_data, driver2_data
-    
+
     session = fastf1.get_session(year, grand_prix, "Q")
     session.load()
 
@@ -351,12 +366,19 @@ def load_teammates_data(year, grand_prix, segment, driver1, driver2):
     except Exception:
         results = None
 
-    p1 = load_driver_data(year, grand_prix, driver1, segment=segment, session=session, results=results)
-    p2 = load_driver_data(year, grand_prix, driver2, segment=segment, session=session, results=results)
+    p1 = load_driver_data(
+        year, grand_prix, driver1, segment=segment, session=session, results=results
+    )
+    p2 = load_driver_data(
+        year, grand_prix, driver2, segment=segment, session=session, results=results
+    )
 
     return p1, p2
 
-def save_figure(fig,data_type,type,variable,year,grand_prix,team,driver1,driver2):
+
+def save_figure(
+    fig, data_type, scope, variable, year, grand_prix, team, driver1, driver2
+):
 
     try:
 
@@ -373,17 +395,48 @@ def save_figure(fig,data_type,type,variable,year,grand_prix,team,driver1,driver2
 
         plots_dir.mkdir(parents=True, exist_ok=True)
 
-        plot_file_name = (f"{driver1}_{driver2}_{variable}_{type}.png")
+        plot_file_name = f"{driver1}_{driver2}_{variable}_{scope}.png"
 
         plot_path = plots_dir / plot_file_name
 
-        fig.savefig(plot_path,bbox_inches="tight")
+        fig.savefig(plot_path, bbox_inches="tight")
 
     except Exception as e:
-        print(
-            f"Error saving figure: {plot_path}. "
-            f"Exception: {e}"
+        print(f"Error saving figure: {plot_path}. " f"Exception: {e}")
+
+
+def save_dataframe(lap, dataframe_name, year, grand_prix):
+
+    dataframe = lap[dataframe_name]
+    driver = lap["Driver"]
+
+    for column in dataframe.columns:
+        if pd.api.types.is_float_dtype(dataframe[column]):
+            dataframe[column] = dataframe[column].round(3)
+
+    try:
+
+        project_root = Path(__file__).resolve().parent.parent
+
+        data_dir = (
+            project_root
+            / "data"
+            / str(year)
+            / str(grand_prix).strip().replace(" ", "_").lower()
+            / driver
         )
+
+        data_dir.mkdir(parents=True, exist_ok=True)
+
+        csv_file_name = f"{dataframe_name.lower()}.csv"
+
+        csv_path = data_dir / csv_file_name
+
+        dataframe.to_csv(csv_path, index=False)
+
+    except Exception as e:
+
+        print(f"Error saving CSV: {csv_path}. Exception: {e}")
 
 
 if __name__ == "__main__":
