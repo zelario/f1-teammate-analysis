@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
+from scipy.stats import pearsonr, spearmanr
 import numpy as np
 import pandas as pd
+from .config import *
 
 
 def choose_color(driver):
@@ -17,20 +19,7 @@ def choose_color(driver):
              if the driver abbreviation is not recognized.
     """
 
-    colors = {
-        "VER": "midnightblue",
-        "TSU": "firebrick",
-        "LEC": "red",
-        "HAM": "yellow",
-        "NOR": "darkorange",
-        "PIA": "gray",
-        "RUS": "darkturquoise",
-        "ANT": "indianred",
-        "ALO": "seagreen",
-        "STR": "dimgray",
-    }
-
-    return colors.get(driver, "black")  # Default to black if driver not found
+    return COLORS.get(driver, "black")  # Default to black if driver not found
 
 
 def plot_variable_comparison(lap_1, lap_2, variable, turns, y_unit=None):
@@ -157,20 +146,20 @@ def plot_variable_delta(lap_1, lap_2, variable, turns, y_unit=None):
     return fig
 
 
-def barplot_feature_comparison(lap_1, lap_2, dataframe_name, feature, y_unit=None):
-
-    lap_1_feature = lap_1[dataframe_name]
-    lap_2_feature = lap_2[dataframe_name]
+def barplot_feature_comparison(lap_1, lap_2, feature, y_unit=None):
 
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
+    
+    lap_1_segments = lap_1["Segments"]
+    lap_2_segments = lap_2["Segments"]
 
-    x_column = lap_1_feature.columns[0]
+    x_column = lap_1_segments.columns[0]
 
-    comparison = lap_1_feature[[x_column, feature]].copy()
+    comparison = lap_1_segments[[x_column, feature]].copy()
 
     comparison = comparison.merge(
-        lap_2_feature[[x_column, feature]],
+        lap_2_segments[[x_column, feature]],
         on=x_column,
         how="left",
         suffixes=(f"_{driver_1}", f"_{driver_2}"),
@@ -224,20 +213,20 @@ def barplot_feature_comparison(lap_1, lap_2, dataframe_name, feature, y_unit=Non
     return fig
 
 
-def barplot_feature_delta(lap_1, lap_2, dataframe_name, feature, y_unit=None):
-
-    lap_1_feature = lap_1[dataframe_name]
-    lap_2_feature = lap_2[dataframe_name]
+def barplot_feature_delta(lap_1, lap_2, feature, y_unit=None):
 
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
 
-    x_column = lap_1_feature.columns[0]
+    lap_1_segments = lap_1["Segments"]
+    lap_2_segments = lap_2["Segments"]
 
-    comparison = lap_1_feature[[x_column, feature]].copy()
+    x_column = lap_1_segments.columns[0]
+
+    comparison = lap_1_segments[[x_column, feature]].copy()
 
     comparison = comparison.merge(
-        lap_2_feature[[x_column, feature]],
+        lap_2_segments[[x_column, feature]],
         on=x_column,
         how="left",
         suffixes=(f"_{driver_1}", f"_{driver_2}"),
@@ -278,73 +267,177 @@ def barplot_feature_delta(lap_1, lap_2, dataframe_name, feature, y_unit=None):
     return fig
 
 
-# TODO esta funcao nao funciona por causa da descrepancia de Turns e Segments
-def scatterplot_features_relationship(
+def calculate_feature_correlation(
     lap_1,
     lap_2,
-    x_dataframe,
     x_feature,
-    y_dataframe,
     y_feature,
 ):
-    """Generates a scatter plot showing the relationship between the deltas of two features."""
+    """Calculates Pearson and Spearman correlation between feature deltas."""
 
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
 
-    x_index = lap_1[x_dataframe].columns[0]
-    y_index = lap_1[y_dataframe].columns[0]
+    segments_1 = lap_1["Segments"][
+        [
+            "Segment",
+            x_feature,
+            y_feature,
+        ]
+    ].copy()
 
-    x_comparison = lap_1[x_dataframe][[x_index, x_feature]].merge(
-        lap_2[x_dataframe][[x_index, x_feature]],
-        on=x_index,
-        suffixes=(f"_{driver_1}", f"_{driver_2}"),
+    segments_2 = lap_2["Segments"][
+        [
+            "Segment",
+            x_feature,
+            y_feature,
+        ]
+    ].copy()
+
+    comparison = segments_1.merge(
+        segments_2,
+        on="Segment",
+        suffixes=(
+            f"_{driver_1}",
+            f"_{driver_2}",
+        ),
     )
-
-    y_comparison = lap_1[y_dataframe][[y_index, y_feature]].merge(
-        lap_2[y_dataframe][[y_index, y_feature]],
-        on=y_index,
-        suffixes=(f"_{driver_1}", f"_{driver_2}"),
-    )
-
-    comparison = x_comparison.merge(y_comparison, left_on=x_index, right_on=y_index)
 
     comparison["DeltaX"] = (
-        comparison[f"{x_feature}_{driver_1}"] - comparison[f"{x_feature}_{driver_2}"]
+        comparison[f"{x_feature}_{driver_1}"]
+        -
+        comparison[f"{x_feature}_{driver_2}"]
     )
 
     comparison["DeltaY"] = (
-        comparison[f"{y_feature}_{driver_1}"] - comparison[f"{y_feature}_{driver_2}"]
+        comparison[f"{y_feature}_{driver_1}"]
+        -
+        comparison[f"{y_feature}_{driver_2}"]
     )
 
-    plt.figure(figsize=(7, 6))
+    comparison = comparison.dropna()
 
-    plt.scatter(comparison["DeltaX"], comparison["DeltaY"], s=150, color="skyblue")
+    pearson_corr, pearson_p = pearsonr(
+        comparison["DeltaX"],
+        comparison["DeltaY"],
+    )
+
+    spearman_corr, spearman_p = spearmanr(
+        comparison["DeltaX"],
+        comparison["DeltaY"],
+    )
+
+    return pd.DataFrame(
+        {
+            "FeatureX": [x_feature],
+            "FeatureY": [y_feature],
+            "Pearson": [round(pearson_corr, 3)],
+            "PearsonP": [round(pearson_p, 5)],
+            "Spearman": [round(spearman_corr, 3)],
+            "SpearmanP": [round(spearman_p, 5)],
+        }
+    )
+
+
+def scatterplot_features_relationship(
+    lap_1,
+    lap_2,
+    x_feature,
+    y_feature,
+):
+    """Generates a scatter plot showing the relationship between feature deltas."""
+
+    driver_1 = lap_1["Driver"]
+    driver_2 = lap_2["Driver"]
+
+    segments_1 = lap_1["Segments"][
+        [
+            "Segment",
+            x_feature,
+            y_feature,
+        ]
+    ].copy()
+
+    segments_2 = lap_2["Segments"][
+        [
+            "Segment",
+            x_feature,
+            y_feature,
+        ]
+    ].copy()
+
+    comparison = segments_1.merge(
+        segments_2,
+        on="Segment",
+        suffixes=(
+            f"_{driver_1}",
+            f"_{driver_2}",
+        ),
+    )
+
+    comparison["DeltaX"] = (
+        comparison[f"{x_feature}_{driver_1}"]
+        -
+        comparison[f"{x_feature}_{driver_2}"]
+    )
+
+    comparison["DeltaY"] = (
+        comparison[f"{y_feature}_{driver_1}"]
+        -
+        comparison[f"{y_feature}_{driver_2}"]
+    )
+
+    plt.figure(
+        figsize=(7, 6)
+    )
+
+    plt.scatter(
+        comparison["DeltaX"],
+        comparison["DeltaY"],
+        s=150,
+        color="skyblue",
+    )
 
     for _, row in comparison.iterrows():
 
         plt.text(
             row["DeltaX"],
             row["DeltaY"],
-            str(int(row[x_index])),
+            str(int(row["Segment"])),
             ha="center",
             va="center",
         )
 
-    plt.axhline(0, color="black", linewidth=1)
+    plt.axhline(
+        0,
+        color="black",
+        linewidth=1,
+    )
 
-    plt.axvline(0, color="black", linewidth=1)
+    plt.axvline(
+        0,
+        color="black",
+        linewidth=1,
+    )
 
-    plt.xlabel(f"Delta {x_feature.replace('_', ' ')} " f"({driver_1} - {driver_2})")
+    plt.xlabel(
+        f"Delta {x_feature.replace('_', ' ')} "
+        f"({driver_1} - {driver_2})"
+    )
 
-    plt.ylabel(f"Delta {y_feature.replace('_', ' ')} " f"({driver_1} - {driver_2})")
+    plt.ylabel(
+        f"Delta {y_feature.replace('_', ' ')} "
+        f"({driver_1} - {driver_2})"
+    )
 
     plt.title(
         f"Delta {y_feature.replace('_', ' ')} vs "
         f"Delta {x_feature.replace('_', ' ')}"
     )
 
-    plt.grid(alpha=0.3)
+    plt.grid(
+        alpha=0.3
+    )
 
     plt.tight_layout()
 
