@@ -1,32 +1,46 @@
 import pandas as pd
+import numpy as np
 
 
-def analyze_speed_segments(
-    lap,
-    turns,
-    entry_distance=50,
-    exit_distance=50,
-    minimum_speed_window=50,
+def analyze_speed_turns(
+    lap, turns, entry_distance=50, exit_distance=50, minimum_speed_window=50
 ):
-    """Analyzes speed metrics for each segment."""
+    """Analyzes speed metrics around each turn, including entry, minimum, and exit speeds.
 
-    telemetry = lap["Telemetry"].reset_index(drop=True)
+    This function processes telemetry data to calculate key speed-related features for each
+    turn. It determines the speed at a specified distance before the turn (entry speed),
+    the minimum speed within a window around the turn, and the speed at a specified
+    distance after the turn (exit speed).
 
-    speed_metrics = []
+    Parameters:
+        telemetry (pandas.DataFrame): Telemetry data for a lap, must include 'Distance' and 'Speed' columns.
+        turns (pandas.DataFrame): DataFrame with turn information, must include 'Number' and 'Distance' columns.
+        entry_distance (int, optional): The distance before the turn to measure entry speed. Defaults to 50.
+        exit_distance (int, optional): The distance after the turn to measure exit speed. Defaults to 50.
+        minimum_speed_window (int, optional): The window size around the turn to find the minimum speed. Defaults to 50.
+
+    Returns:
+        pandas.DataFrame: A DataFrame with columns 'Turn', 'EntrySpeed', 'MinimumSpeed', and 'ExitSpeed'
+                          for each turn.
+    """
+
+    telemetry = lap["Telemetry"]
+
+    telemetry = telemetry.reset_index(drop=True)
+
+    corner_features = []
 
     for _, turn in turns.iterrows():
 
-        turn_number = int(turn["Number"])
+        turn_number = turn["Number"]
         turn_distance = turn["Distance"]
 
-        segment = turn_number - 1
-
+        # Get entry speed
         entry_distance_target = turn_distance - entry_distance
 
         entry_telemetry = telemetry[telemetry["Distance"] <= entry_distance_target]
 
         if entry_telemetry.empty:
-
             entry_speed = None
 
         else:
@@ -37,29 +51,24 @@ def analyze_speed_segments(
 
             entry_speed = entry_point["Speed"]
 
-        speed_window = telemetry[
+        # Get minimum speed around the corner
+        minimum_speed_telemetry = telemetry[
             (telemetry["Distance"] >= turn_distance - minimum_speed_window)
             & (telemetry["Distance"] <= turn_distance + minimum_speed_window)
         ]
 
-        if speed_window.empty:
-
+        if minimum_speed_telemetry.empty:
             minimum_speed = None
-            mean_speed = None
-            speed_std = None
 
         else:
+            minimum_speed = minimum_speed_telemetry["Speed"].min()
 
-            minimum_speed = speed_window["Speed"].min()
-            mean_speed = speed_window["Speed"].mean()
-            speed_std = speed_window["Speed"].std()
-
+        # Get exit speed
         exit_distance_target = turn_distance + exit_distance
 
         exit_telemetry = telemetry[telemetry["Distance"] >= exit_distance_target]
 
         if exit_telemetry.empty:
-
             exit_speed = None
 
         else:
@@ -70,42 +79,31 @@ def analyze_speed_segments(
 
             exit_speed = exit_point["Speed"]
 
-        speed_metrics.append(
+        corner_features.append(
             {
-                "Segment": segment,
-                "ExitSpeed": round(exit_speed, 3) if exit_speed is not None else None,
-                "MinimumSpeed": (
-                    round(minimum_speed, 3) if minimum_speed is not None else None
-                ),
-                "MeanSpeed": round(mean_speed, 3) if mean_speed is not None else None,
-                "StdSpeed": round(speed_std, 3) if speed_std is not None else None,
-                "EntrySpeed": (
-                    round(entry_speed, 3) if entry_speed is not None else None
-                ),                
+                "Turn": turn_number,
+                "EntrySpeed": entry_speed,
+                "ApexSpeed": minimum_speed,
+                "ExitSpeed": exit_speed,
             }
         )
 
-    speed_metrics_df = pd.DataFrame(speed_metrics)
+    corner_features_df = pd.DataFrame(corner_features).reset_index(drop=True)
+    corner_features_df["Turn"] = corner_features_df["Turn"].astype(int)
 
-    speed_metrics_df["Segment"] = speed_metrics_df["Segment"].astype(int)
-
-    return speed_metrics_df
+    return corner_features_df
 
 
-def analyze_braking_segments(
-    lap,
-    turns,
-    braking_distance=300,
-):
-    """Analyzes braking metrics for each segment."""
+def analyze_braking_turns(lap, turns, braking_distance=300):
+    """
+    Identifies braking zones and assigns each one to the nearest following turn.
+    """
 
     telemetry = lap["Telemetry"].reset_index(drop=True)
 
     is_braking = telemetry["Brake"] > 0
 
-    groups = is_braking.ne(
-        is_braking.shift()
-    ).cumsum()
+    groups = is_braking.ne(is_braking.shift()).cumsum()
 
     braking_zones = []
 
@@ -113,107 +111,129 @@ def analyze_braking_segments(
 
         braking_zones.append(
             {
-                "StartDistance": zone["Distance"].iloc[0],
-                "BrakingDuration": (
-                    zone["Time"].iloc[-1]
-                    - zone["Time"].iloc[0]
-                ),
+                "BrakingPointDistance": zone["Distance"].iloc[0],
+                "BrakingDuration": (zone["Time"].iloc[-1] - zone["Time"].iloc[0]),
                 "BrakingDistance": (
-                    zone["Distance"].iloc[-1]
-                    - zone["Distance"].iloc[0]
+                    zone["Distance"].iloc[-1] - zone["Distance"].iloc[0]
                 ),
             }
         )
 
-    braking_zones = pd.DataFrame(
-        braking_zones
-    )
+    braking_zones = pd.DataFrame(braking_zones).reset_index(drop=True)
 
-    braking_metrics = []
+    assigned_zones = []
 
     used_indices = set()
 
     for _, turn in turns.iterrows():
 
-        turn_number = int(
-            turn["Number"]
-        )
-
-        segment = turn_number - 1
-
+        turn_number = int(turn["Number"])
         turn_distance = turn["Distance"]
 
-        distances = (
-            turn_distance
-            - braking_zones["StartDistance"]
-        )
+        distances = turn_distance - braking_zones["BrakingPointDistance"]
 
         valid_zones = braking_zones[
             (distances >= 0)
-            &
-            (distances <= braking_distance)
-            &
-            (~braking_zones.index.isin(used_indices))
+            & (distances <= braking_distance)
+            & (~braking_zones.index.isin(used_indices))
         ]
 
         if valid_zones.empty:
 
-            braking_metrics.append(
-                {
-                    "Segment": segment,
-                    "BrakingPoint": 0,
-                    "BrakingDistance": 0,
-                    "BrakingDuration": 0,
-                }
-            )
-
             continue
 
-        closest_idx = (
-            turn_distance
-            - valid_zones["StartDistance"]
-        ).idxmin()
+        closest_idx = (turn_distance - valid_zones["BrakingPointDistance"]).idxmin()
 
-        braking_zone = braking_zones.loc[
-            closest_idx
-        ]
+        braking_zone = braking_zones.loc[closest_idx]
 
-        braking_metrics.append(
+        assigned_zones.append(
             {
-                "Segment": segment,
-                "BrakingPoint": (
-                    turn_distance
-                    - braking_zone["StartDistance"]
-                ),
-                "BrakingDistance": (
-                    braking_zone["BrakingDistance"]
-                ),
-                "BrakingDuration": (
-                    braking_zone["BrakingDuration"]
-                ),
+                "Turn": turn_number,
+                "BrakingPoint": (turn_distance - braking_zone["BrakingPointDistance"]),
+                "BrakingDistance": braking_zone["BrakingDistance"],
+                "BrakingDuration": braking_zone["BrakingDuration"],
             }
         )
 
-        used_indices.add(
-            closest_idx
+        used_indices.add(closest_idx)
+
+    assigned_turns = {zone["Turn"] for zone in assigned_zones}
+
+    for _, turn in turns.iterrows():
+
+        turn_number = int(turn["Number"])
+
+        if turn_number in assigned_turns:
+            continue
+
+        assigned_zones.append(
+            {
+                "Turn": turn_number,
+                "BrakingPoint": np.nan,
+                "BrakingDistance": np.nan,
+                "BrakingDuration": np.nan,
+            }
         )
 
-    braking_metrics_df = pd.DataFrame(
-        braking_metrics
+    assigned_zones_df = (
+        pd.DataFrame(assigned_zones).sort_values("Turn").reset_index(drop=True)
     )
 
-    braking_metrics_df["Segment"] = (
-        braking_metrics_df["Segment"]
-        .astype(int)
-    )
+    assigned_zones_df["Turn"] = assigned_zones_df["Turn"].astype(int)
 
-    braking_metrics_df = (
-        braking_metrics_df
-        .sort_values("Segment")
-        .reset_index(drop=True)
-    )
+    return assigned_zones_df
 
-    return braking_metrics_df
+
+def analyze_speed_segments(
+    lap,
+    turns,
+):
+
+    telemetry = lap["Telemetry"].reset_index(drop=True)
+
+    segments = []
+
+    segment_distances = [0] + turns["Distance"].tolist()
+
+    for i in range(len(segment_distances)):
+
+        start_distance = segment_distances[i]
+
+        if i < len(segment_distances) - 1:
+            end_distance = segment_distances[i + 1]
+        else:
+            end_distance = float("inf")
+
+        segment_window = telemetry[
+            (telemetry["Distance"] >= start_distance)
+            & (telemetry["Distance"] < end_distance)
+        ]
+
+        if segment_window.empty:
+
+            mean_speed = np.nan
+            std_speed = np.nan
+            maximum_speed = np.nan
+            minimum_speed = np.nan
+
+        else:
+
+            mean_speed = segment_window["Speed"].mean()
+            std_speed = segment_window["Speed"].std()
+            maximum_speed = segment_window["Speed"].max()
+            minimum_speed = segment_window["Speed"].min()
+
+        segments.append(
+            {
+                "Segment": i,
+                "MeanSpeed": mean_speed,
+                "StdSpeed": std_speed,
+                "MaximumSpeed": maximum_speed,
+                "MinimumSpeed": minimum_speed,
+            }
+        )
+
+    return pd.DataFrame(segments)
 
 
 def analyze_throttle_segments(lap, turns, full_throttle_threshold=95):
@@ -414,10 +434,9 @@ def analyze_time_segments(lap, turns):
 
 
 def build_segments_dataframe(
-    segment_times,
-    speed_metrics,
-    braking_zones,
-    throttle_segments,
+    times,
+    speed,
+    throttle,
     gear_shifts,
 ):
     """
@@ -434,22 +453,16 @@ def build_segments_dataframe(
         pd.DataFrame
     """
 
-    segments = segment_times.copy()
+    segments = times.copy()
 
     segments = segments.merge(
-        speed_metrics,
+        speed,
         on="Segment",
         how="left",
     )
 
     segments = segments.merge(
-        braking_zones,
-        on="Segment",
-        how="left",
-    )
-
-    segments = segments.merge(
-        throttle_segments,
+        throttle,
         on="Segment",
         how="left",
     )
@@ -463,3 +476,34 @@ def build_segments_dataframe(
     segments = segments.sort_values("Segment").reset_index(drop=True)
 
     return segments
+
+
+def build_turns_dataframe(
+    speed,
+    braking,
+):
+    """
+    Merges all turn-level features into a single dataframe.
+
+    Parameters
+    ----------
+    speed : pd.DataFrame
+        Speed-related features for each turn.
+    braking : pd.DataFrame
+        Braking-related features for each turn.
+
+    Returns
+    -------
+    pd.DataFrame
+        Combined turn-level feature dataframe.
+    """
+
+    turn_features = braking.merge(
+        speed,
+        on="Turn",
+        how="left",
+    )
+
+    turn_features = turn_features.sort_values("Turn").reset_index(drop=True)
+
+    return turn_features

@@ -151,15 +151,15 @@ def barplot_feature_comparison(lap_1, lap_2, feature, y_unit=None):
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
     
-    lap_1_segments = lap_1["Segments"]
-    lap_2_segments = lap_2["Segments"]
+    lap_1_features = lap_1["Segments"] if feature in lap_1["Segments"].columns else lap_1["Turns"]
+    lap_2_features = lap_2["Segments"] if feature in lap_2["Segments"].columns else lap_2["Turns"]
 
-    x_column = lap_1_segments.columns[0]
+    x_column = lap_1_features.columns[0]
 
-    comparison = lap_1_segments[[x_column, feature]].copy()
+    comparison = lap_1_features[[x_column, feature]].copy()
 
     comparison = comparison.merge(
-        lap_2_segments[[x_column, feature]],
+        lap_2_features[[x_column, feature]],
         on=x_column,
         how="left",
         suffixes=(f"_{driver_1}", f"_{driver_2}"),
@@ -218,22 +218,23 @@ def barplot_feature_delta(lap_1, lap_2, feature, y_unit=None):
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
 
-    lap_1_segments = lap_1["Segments"]
-    lap_2_segments = lap_2["Segments"]
+    lap_1_features = lap_1["Segments"] if feature in lap_1["Segments"].columns else lap_1["Turns"]
+    lap_2_features = lap_2["Segments"] if feature in lap_2["Segments"].columns else lap_2["Turns"]
 
-    x_column = lap_1_segments.columns[0]
+    x_column = lap_1_features.columns[0]
 
-    comparison = lap_1_segments[[x_column, feature]].copy()
+    comparison = lap_1_features[[x_column, feature]].copy()
 
     comparison = comparison.merge(
-        lap_2_segments[[x_column, feature]],
+        lap_2_features[[x_column, feature]],
         on=x_column,
         how="left",
         suffixes=(f"_{driver_1}", f"_{driver_2}"),
     )
 
     comparison["Delta"] = (
-        comparison[f"{feature}_{driver_1}"] - comparison[f"{feature}_{driver_2}"]
+        comparison[f"{feature}_{driver_1}"].fillna(0)
+        - comparison[f"{feature}_{driver_2}"].fillna(0)
     )
 
     plt.figure(figsize=(10, 4))
@@ -278,7 +279,7 @@ def calculate_feature_correlation(
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
 
-    segments_1 = lap_1["Segments"][
+    features_1 = lap_1["Segments"][
         [
             "Segment",
             x_feature,
@@ -286,7 +287,7 @@ def calculate_feature_correlation(
         ]
     ].copy()
 
-    segments_2 = lap_2["Segments"][
+    features_2 = lap_2["Segments"][
         [
             "Segment",
             x_feature,
@@ -294,8 +295,8 @@ def calculate_feature_correlation(
         ]
     ].copy()
 
-    comparison = segments_1.merge(
-        segments_2,
+    comparison = features_1.merge(
+        features_2,
         on="Segment",
         suffixes=(
             f"_{driver_1}",
@@ -350,7 +351,7 @@ def scatterplot_features_relationship(
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
 
-    segments_1 = lap_1["Segments"][
+    features_1 = lap_1["Segments"][
         [
             "Segment",
             x_feature,
@@ -358,7 +359,7 @@ def scatterplot_features_relationship(
         ]
     ].copy()
 
-    segments_2 = lap_2["Segments"][
+    features_2 = lap_2["Segments"][
         [
             "Segment",
             x_feature,
@@ -366,8 +367,8 @@ def scatterplot_features_relationship(
         ]
     ].copy()
 
-    comparison = segments_1.merge(
-        segments_2,
+    comparison = features_1.merge(
+        features_2,
         on="Segment",
         suffixes=(
             f"_{driver_1}",
