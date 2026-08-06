@@ -279,17 +279,26 @@ def calculate_feature_correlation(
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
 
-    features_1 = lap_1["Segments"][
+    if x_feature in lap_1["Segments"].columns:
+        dataframe_1 = lap_1["Segments"]
+        dataframe_2 = lap_2["Segments"]
+        index_column = "Segment"
+    else:
+        dataframe_1 = lap_1["Turns"]
+        dataframe_2 = lap_2["Turns"]
+        index_column = "Turn"
+
+    features_1 = dataframe_1[
         [
-            "Segment",
+            index_column,
             x_feature,
             y_feature,
         ]
     ].copy()
 
-    features_2 = lap_2["Segments"][
+    features_2 = dataframe_2[
         [
-            "Segment",
+            index_column,
             x_feature,
             y_feature,
         ]
@@ -297,26 +306,49 @@ def calculate_feature_correlation(
 
     comparison = features_1.merge(
         features_2,
-        on="Segment",
+        on=index_column,
         suffixes=(
             f"_{driver_1}",
             f"_{driver_2}",
         ),
     )
 
+    braking_features = {
+        "BrakingPoint",
+        "BrakingDistance",
+        "BrakingDuration",
+    }
+
+    if (
+        x_feature in braking_features
+        or
+        y_feature in braking_features
+    ):
+        comparison = comparison.fillna(0)
+
     comparison["DeltaX"] = (
         comparison[f"{x_feature}_{driver_1}"]
-        -
-        comparison[f"{x_feature}_{driver_2}"]
+        - comparison[f"{x_feature}_{driver_2}"]
     )
 
     comparison["DeltaY"] = (
         comparison[f"{y_feature}_{driver_1}"]
-        -
-        comparison[f"{y_feature}_{driver_2}"]
+        - comparison[f"{y_feature}_{driver_2}"]
     )
 
     comparison = comparison.dropna()
+
+    if len(comparison) < 2:
+        return pd.DataFrame(
+            {
+                "FeatureX": [x_feature],
+                "FeatureY": [y_feature],
+                "Pearson": [np.nan],
+                "PearsonP": [np.nan],
+                "Spearman": [np.nan],
+                "SpearmanP": [np.nan],
+            }
+        )
 
     pearson_corr, pearson_p = pearsonr(
         comparison["DeltaX"],
@@ -332,10 +364,10 @@ def calculate_feature_correlation(
         {
             "FeatureX": [x_feature],
             "FeatureY": [y_feature],
-            "Pearson": [round(pearson_corr, 3)],
-            "PearsonP": [round(pearson_p, 5)],
-            "Spearman": [round(spearman_corr, 3)],
-            "SpearmanP": [round(spearman_p, 5)],
+            "Pearson": [pearson_corr],
+            "PearsonP": [pearson_p],
+            "Spearman": [spearman_corr],
+            "SpearmanP": [spearman_p],
         }
     )
 
@@ -351,17 +383,26 @@ def scatterplot_features_relationship(
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
 
-    features_1 = lap_1["Segments"][
+    if x_feature in lap_1["Segments"].columns:
+        dataframe_1 = lap_1["Segments"]
+        dataframe_2 = lap_2["Segments"]
+        index_column = "Segment"
+    else:
+        dataframe_1 = lap_1["Turns"]
+        dataframe_2 = lap_2["Turns"]
+        index_column = "Turn"
+
+    features_1 = dataframe_1[
         [
-            "Segment",
+            index_column,
             x_feature,
             y_feature,
         ]
     ].copy()
 
-    features_2 = lap_2["Segments"][
+    features_2 = dataframe_2[
         [
-            "Segment",
+            index_column,
             x_feature,
             y_feature,
         ]
@@ -369,7 +410,7 @@ def scatterplot_features_relationship(
 
     comparison = features_1.merge(
         features_2,
-        on="Segment",
+        on=index_column,
         suffixes=(
             f"_{driver_1}",
             f"_{driver_2}",
@@ -378,19 +419,17 @@ def scatterplot_features_relationship(
 
     comparison["DeltaX"] = (
         comparison[f"{x_feature}_{driver_1}"]
-        -
-        comparison[f"{x_feature}_{driver_2}"]
+        - comparison[f"{x_feature}_{driver_2}"]
     )
 
     comparison["DeltaY"] = (
         comparison[f"{y_feature}_{driver_1}"]
-        -
-        comparison[f"{y_feature}_{driver_2}"]
+        - comparison[f"{y_feature}_{driver_2}"]
     )
 
-    plt.figure(
-        figsize=(7, 6)
-    )
+    comparison = comparison.dropna()
+
+    plt.figure(figsize=(7, 6))
 
     plt.scatter(
         comparison["DeltaX"],
@@ -404,7 +443,7 @@ def scatterplot_features_relationship(
         plt.text(
             row["DeltaX"],
             row["DeltaY"],
-            str(int(row["Segment"])),
+            str(int(row[index_column])),
             ha="center",
             va="center",
         )
@@ -436,9 +475,7 @@ def scatterplot_features_relationship(
         f"Delta {x_feature.replace('_', ' ')}"
     )
 
-    plt.grid(
-        alpha=0.3
-    )
+    plt.grid(alpha=0.3)
 
     plt.tight_layout()
 
