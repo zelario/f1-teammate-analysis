@@ -1,6 +1,6 @@
 # F1 Teammate Analysis
 
-## How do two teammates extract performance from the same car differently?
+## How can two drivers, driving the same car, produce different lap times??
 
 A Formula 1 data analysis project that investigates the performance differences between teammates driving the same car.
 
@@ -153,5 +153,3 @@ f1-teammate-analysis/
 ## Project Status
 
 The project is currently under development.
-
-Future analysis will focus on comparing specific performance areas and identifying the driving characteristics that explain differences in lap time between teammates.
