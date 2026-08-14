@@ -150,9 +150,13 @@ def barplot_feature_comparison(lap_1, lap_2, feature, y_unit=None):
 
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
-    
-    lap_1_features = lap_1["Segments"] if feature in lap_1["Segments"].columns else lap_1["Turns"]
-    lap_2_features = lap_2["Segments"] if feature in lap_2["Segments"].columns else lap_2["Turns"]
+
+    lap_1_features = (
+        lap_1["Segments"] if feature in lap_1["Segments"].columns else lap_1["Turns"]
+    )
+    lap_2_features = (
+        lap_2["Segments"] if feature in lap_2["Segments"].columns else lap_2["Turns"]
+    )
 
     x_column = lap_1_features.columns[0]
 
@@ -218,8 +222,12 @@ def barplot_feature_delta(lap_1, lap_2, feature, y_unit=None):
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
 
-    lap_1_features = lap_1["Segments"] if feature in lap_1["Segments"].columns else lap_1["Turns"]
-    lap_2_features = lap_2["Segments"] if feature in lap_2["Segments"].columns else lap_2["Turns"]
+    lap_1_features = (
+        lap_1["Segments"] if feature in lap_1["Segments"].columns else lap_1["Turns"]
+    )
+    lap_2_features = (
+        lap_2["Segments"] if feature in lap_2["Segments"].columns else lap_2["Turns"]
+    )
 
     x_column = lap_1_features.columns[0]
 
@@ -232,10 +240,9 @@ def barplot_feature_delta(lap_1, lap_2, feature, y_unit=None):
         suffixes=(f"_{driver_1}", f"_{driver_2}"),
     )
 
-    comparison["Delta"] = (
-        comparison[f"{feature}_{driver_1}"].fillna(0)
-        - comparison[f"{feature}_{driver_2}"].fillna(0)
-    )
+    comparison["Delta"] = comparison[f"{feature}_{driver_1}"].fillna(0) - comparison[
+        f"{feature}_{driver_2}"
+    ].fillna(0)
 
     plt.figure(figsize=(10, 4))
 
@@ -319,21 +326,15 @@ def calculate_feature_correlation(
         "BrakingDuration",
     }
 
-    if (
-        x_feature in braking_features
-        or
-        y_feature in braking_features
-    ):
+    if x_feature in braking_features or y_feature in braking_features:
         comparison = comparison.fillna(0)
 
     comparison["DeltaX"] = (
-        comparison[f"{x_feature}_{driver_1}"]
-        - comparison[f"{x_feature}_{driver_2}"]
+        comparison[f"{x_feature}_{driver_1}"] - comparison[f"{x_feature}_{driver_2}"]
     )
 
     comparison["DeltaY"] = (
-        comparison[f"{y_feature}_{driver_1}"]
-        - comparison[f"{y_feature}_{driver_2}"]
+        comparison[f"{y_feature}_{driver_1}"] - comparison[f"{y_feature}_{driver_2}"]
     )
 
     comparison = comparison.dropna()
@@ -418,13 +419,11 @@ def scatterplot_features_relationship(
     )
 
     comparison["DeltaX"] = (
-        comparison[f"{x_feature}_{driver_1}"]
-        - comparison[f"{x_feature}_{driver_2}"]
+        comparison[f"{x_feature}_{driver_1}"] - comparison[f"{x_feature}_{driver_2}"]
     )
 
     comparison["DeltaY"] = (
-        comparison[f"{y_feature}_{driver_1}"]
-        - comparison[f"{y_feature}_{driver_2}"]
+        comparison[f"{y_feature}_{driver_1}"] - comparison[f"{y_feature}_{driver_2}"]
     )
 
     comparison = comparison.dropna()
@@ -460,15 +459,9 @@ def scatterplot_features_relationship(
         linewidth=1,
     )
 
-    plt.xlabel(
-        f"Delta {x_feature.replace('_', ' ')} "
-        f"({driver_1} - {driver_2})"
-    )
+    plt.xlabel(f"Delta {x_feature.replace('_', ' ')} " f"({driver_1} - {driver_2})")
 
-    plt.ylabel(
-        f"Delta {y_feature.replace('_', ' ')} "
-        f"({driver_1} - {driver_2})"
-    )
+    plt.ylabel(f"Delta {y_feature.replace('_', ' ')} " f"({driver_1} - {driver_2})")
 
     plt.title(
         f"Delta {y_feature.replace('_', ' ')} vs "
@@ -484,3 +477,85 @@ def scatterplot_features_relationship(
     plt.show()
 
     return fig
+
+
+def compare_times(lap_1, lap_2):
+    """
+    Compare segment and turn times between two drivers.
+
+    Returns
+    -------
+    segment_df : pd.DataFrame
+        Segment times, delta, and cumulative delta.
+    turn_df : pd.DataFrame
+        Turn times and delta.
+    """
+
+    driver_1 = lap_1["Driver"]
+    driver_2 = lap_2["Driver"]
+
+    segment_df = pd.DataFrame(
+        {
+            "Segment": lap_1["Segments"]["Segment"].values,
+            driver_1: lap_1["Segments"]["SegmentTime"].values,
+            driver_2: lap_2["Segments"]["SegmentTime"].values,
+        }
+    )
+
+    segment_df["Delta"] = segment_df[driver_1] - segment_df[driver_2]
+    segment_df["CumulativeDelta"] = segment_df["Delta"].cumsum()
+
+    turn_df = pd.DataFrame(
+        {
+            "Turn": lap_1["Turns"]["Turn"].values,
+            driver_1: lap_1["Turns"]["TurnTime"].values,
+            driver_2: lap_2["Turns"]["TurnTime"].values,
+        }
+    )
+
+    turn_df["Delta"] = turn_df[driver_1] - turn_df[driver_2]
+
+    display(segment_df)
+    display(turn_df)
+
+
+def compare_features(lap_1, lap_2, features):
+    """
+    Compare selected features between two drivers.
+
+    Parameters
+    ----------
+    lap_1, lap_2 : dict
+        Lap data for the two drivers.
+    features : list[str]
+        Features to compare.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with the label column and paired feature columns.
+    """
+
+    feature_type = "Segments" if features[0] in lap_1["Segments"].columns else "Turns"
+
+    label = feature_type[:-1] if feature_type.endswith("s") else feature_type
+
+    df1 = lap_1[feature_type][[label] + features].copy()
+    df2 = lap_2[feature_type][[label] + features].copy()
+
+    df1 = df1.rename(
+        columns={feature: f"{feature}_{lap_1['Driver']}" for feature in features}
+    )
+
+    df2 = df2.rename(
+        columns={feature: f"{feature}_{lap_2['Driver']}" for feature in features}
+    )
+
+    result = df1.merge(df2, on=label, how="outer")
+
+    columns = [label]
+
+    for feature in features:
+        columns.extend([f"{feature}_{lap_1['Driver']}", f"{feature}_{lap_2['Driver']}"])
+
+    display(result[columns])

@@ -60,9 +60,7 @@ def analyze_time_turns(
 
         else:
 
-            closest_idx = (
-                turn_distance - valid_zones["BrakingPointDistance"]
-            ).idxmin()
+            closest_idx = (turn_distance - valid_zones["BrakingPointDistance"]).idxmin()
 
             start_distance = braking_zones.loc[
                 closest_idx,
@@ -72,17 +70,13 @@ def analyze_time_turns(
             used_indices.add(closest_idx)
 
         start_row = telemetry.iloc[
-            (telemetry["Distance"] - start_distance)
-            .abs()
-            .argmin()
+            (telemetry["Distance"] - start_distance).abs().argmin()
         ]
 
         exit_distance_target = turn_distance + exit_distance
 
         end_row = telemetry.iloc[
-            (telemetry["Distance"] - exit_distance_target)
-            .abs()
-            .argmin()
+            (telemetry["Distance"] - exit_distance_target).abs().argmin()
         ]
 
         corner_times.append(
@@ -93,9 +87,7 @@ def analyze_time_turns(
         )
 
     corner_times_df = (
-        pd.DataFrame(corner_times)
-        .sort_values("Turn")
-        .reset_index(drop=True)
+        pd.DataFrame(corner_times).sort_values("Turn").reset_index(drop=True)
     )
 
     corner_times_df["Turn"] = corner_times_df["Turn"].astype(int)
@@ -286,64 +278,45 @@ def analyze_braking_turns(lap, turns, braking_distance=300):
 
 
 def analyze_time_segments(lap, turns):
-    """Analyzes and calculates the time spent in each segment between turns.
-
-    This function takes telemetry data and turn information to calculate the time duration
-    for each segment of the track defined by the turns.
-
-    Parameters:
-        telemetry (pandas.DataFrame): Telemetry data for a specific lap.
-                                      Must contain 'Distance' and 'Time' columns.
-        turns (pandas.DataFrame): DataFrame containing turn information, expected to have 'Distance' column.
-
-    Returns:
-        pandas.DataFrame: A DataFrame with columns 'Turn', 'StartDistance', 'EndDistance', and 'SegmentTime',
-                          representing the time taken for each segment.
+    """
+    Calculates segment times using interpolated telemetry timestamps
+    at each turn distance.
     """
 
-    telemetry = lap["Telemetry"]
+    telemetry = lap["Telemetry"].reset_index(drop=True)
 
-    telemetry = telemetry.reset_index(drop=True)
+    telemetry = telemetry.sort_values("Distance")
 
     segment_distances = [0] + turns["Distance"].tolist()
+
+    # Interpolate the exact timestamp at each turn distance
+    boundary_times = np.interp(
+        segment_distances, telemetry["Distance"], telemetry["Time"]
+    )
 
     segment_times = []
 
     for i in range(len(segment_distances)):
-
-        turn_number = i
-
         start_distance = segment_distances[i]
+        start_time = boundary_times[i]
 
         if i < len(segment_distances) - 1:
-
             end_distance = segment_distances[i + 1]
-
+            end_time = boundary_times[i + 1]
         else:
-
-            end_distance = float("inf")
-
-        segment_telemetry = telemetry[
-            (telemetry["Distance"] >= start_distance)
-            & (telemetry["Distance"] < end_distance)
-        ]
-
-        if segment_telemetry.empty:
-
-            continue
-
-        start_time = segment_telemetry["Time"].iloc[0]
-
-        end_time = segment_telemetry["Time"].iloc[-1]
+            end_distance = telemetry["Distance"].iloc[-1]
+            end_time = telemetry["Time"].iloc[-1]
 
         segment_times.append(
             {
-                "Segment": turn_number,
+                "Segment": i,
+                "StartDistance": start_distance,
+                "EndDistance": end_distance,
                 "SegmentTime": end_time - start_time,
             }
         )
 
-    return pd.DataFrame(segment_times).reset_index(drop=True)
+    return pd.DataFrame(segment_times)
 
 
 def analyze_speed_segments(
@@ -532,7 +505,6 @@ def analyze_gear_shifts_segments(lap, turns):
     return pd.DataFrame(segment_features).reset_index(drop=True)
 
 
-
 def build_segments_dataframe(
     times,
     speed,
@@ -604,7 +576,7 @@ def build_turns_dataframe(
         on="Turn",
         how="left",
     )
-    
+
     turn_features = turn_features.merge(
         speed,
         on="Turn",
