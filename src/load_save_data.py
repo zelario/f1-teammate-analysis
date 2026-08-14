@@ -165,7 +165,15 @@ def get_drivers(session, team):
     except Exception:
         results = None
 
-    team_drivers = results[results["TeamName"] == team]["Abbreviation"].tolist()
+    # If results couldn't be obtained, return empty drivers
+    if results is None:
+        return None, None
+
+    # Safely attempt to extract drivers for the team
+    try:
+        team_drivers = results[results["TeamName"] == team]["Abbreviation"].tolist()
+    except Exception:
+        return None, None
 
     driver1 = team_drivers[0] if len(team_drivers) > 0 else None
     driver2 = team_drivers[1] if len(team_drivers) > 1 else None

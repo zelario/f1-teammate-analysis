@@ -4,7 +4,7 @@
 
 A Formula 1 data analysis project that investigates the performance differences between teammates driving the same car.
 
-The project uses telemetry and session data from the `FastF1` Python library to compare qualifying laps and analyse how differences in driving behaviour contribute to differences in lap time.
+The project uses telemetry and session data from the `FastF1` Python library to compare qualifying laps and analyze how differences in driving behaviour contribute to lap time gaps.
 
 The analysis focuses on identifying where performance differences occur throughout a lap and which driving characteristics contribute to them.
 
@@ -58,7 +58,7 @@ The raw telemetry data is prepared for analysis through the following steps:
 * Converting variables to appropriate data types
 * Handling missing values
 * Structuring the data for further processing
-* Data alignement between both drivers
+* Data alignment between both drivers
 
 ### 3. Data Exploration
 
@@ -117,25 +117,28 @@ The final comparison aims to explain not only which driver was faster, but where
 ## Project Structure
 
 ```text
-F1-Teammate-Analysis/
-│
-├── data/
-│   ├── raw/
-│   ├── unprocessed/
-│   └── processed/
-│
-├── notebooks/
-│   ├── data_preparation.ipynb
-│   └── exploratory_analysis.ipynb
-│
-├── src/
-│   ├── data_collection/
-│   ├── preprocessing/
-│   ├── feature_engineering/
-│   └── visualization/
-│
+f1-teammate-analysis/
+├── README.md
 ├── requirements.txt
-└── README.md
+├── cache/
+├── data/
+│   └── 2025/...
+├── docs/
+│   └── track_layouts/
+├── notebooks/
+│   ├── 01_data_preparation.ipynb
+│   ├── 02_data_exploration.ipynb
+│   ├── 03_feature_engineering.ipynb
+│   ├── 04_feature_analysis.ipynb
+│   └── 05_performance_comparison.ipynb
+├── src/
+│   ├── __init__.py
+│   ├── config.py
+│   ├── explore_data.py
+│   ├── feature_engineering.py
+│   ├── load_save_data.py
+│   └── preprocess_data.py
+└── visualizations/
 ```
 
 ## Technologies

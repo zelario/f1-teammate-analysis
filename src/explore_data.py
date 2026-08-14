@@ -23,26 +23,20 @@ def choose_color(driver):
 
 
 def plot_variable_comparison(lap_1, lap_2, variable, turns, y_unit=None):
-    """Plots a specified telemetry variable against distance for two drivers.
+    """Plot a telemetry variable against distance for two drivers.
 
-    This function generates a line plot comparing a chosen telemetry variable (e.g., Speed, RPM)
-    between two drivers over the course of a lap, represented by distance. It highlights turn
-    numbers on the x-axis for better contextualization.
+    Generates a line plot comparing `variable` between two driver laps over distance
+    and marks turn locations on the x-axis for context.
 
     Parameters:
-        lap_1_telemetry (pandas.DataFrame): Telemetry data for the first driver for a specific lap.
-                                            Must contain 'Distance' and the specified `variable` columns.
-        lap_2_telemetry (pandas.DataFrame): Telemetry data for the second driver for a specific lap.
-                                            Must contain 'Distance' and the specified `variable` columns.
-        variable (str): The name of the telemetry column to plot on the y-axis (e.g., "Speed", "RPM").
-        turns (pandas.DataFrame): DataFrame containing turn information, expected to have 'Number'
-                                  and 'Distance' columns. These distances are used for x-axis ticks.
-        driver_1 (str, optional): The abbreviation of the first driver. Used for plot labels and
-                                  color assignment. Defaults to None.
-        driver_2 (str, optional): The abbreviation of the second driver. Used for plot labels and
-                                  color assignment. Defaults to None.
-        y_unit (str, optional): The unit of the variable being plotted (e.g., "km/h", "RPM").
-                                 Appears in the y-axis label. Defaults to None.
+        lap_1 (dict): First driver's lap payload containing at least keys 'Telemetry' and 'Driver'.
+        lap_2 (dict): Second driver's lap payload containing at least keys 'Telemetry' and 'Driver'.
+        variable (str): Telemetry column name to plot (e.g., 'Speed', 'RPM').
+        turns (pandas.DataFrame): DataFrame with 'Number' and 'Distance' columns for turns.
+        y_unit (str, optional): Unit string for y-axis label (e.g., 'km/h'). Defaults to None.
+
+    Returns:
+        matplotlib.figure.Figure: The created figure object.
     """
 
     lap_1_telemetry = lap_1["Telemetry"]
@@ -91,25 +85,20 @@ def plot_variable_comparison(lap_1, lap_2, variable, turns, y_unit=None):
 
 
 def plot_variable_delta(lap_1, lap_2, variable, turns, y_unit=None):
-    """Plots the difference in a telemetry variable between two drivers against distance.
+    """Plot the delta of a telemetry variable between two drivers over distance.
 
-    This function calculates the delta (difference) of a specified telemetry variable
-    between two drivers and plots this delta over the course of a lap, represented by distance.
-    Turn numbers are used as x-axis ticks for easy reference.
+    Computes the pointwise difference of `variable` between `lap_1` and `lap_2` and
+    plots it, using turn distances as x-axis markers.
 
     Parameters:
-        lap_1_telemetry (pandas.DataFrame): Telemetry data for the first driver for a specific lap.
-                                            Must contain 'Distance' and the specified `variable` columns.
-        lap_2_telemetry (pandas.DataFrame): Telemetry data for the second driver for a specific lap.
-                                            Must contain 'Distance' and the specified `variable` columns.
-        driver_1 (str): The abbreviation of the first driver. Used for plot labels.
-        driver_2 (str): The abbreviation of the second driver. Used for plot labels.
-        variable (str): The name of the telemetry column to calculate the delta for and plot
-                        on the y-axis (e.g., "Speed", "Brake").
-        turns (pandas.DataFrame): DataFrame containing turn information, expected to have 'Number'
-                                  and 'Distance' columns. These distances are used for x-axis ticks.
-        y_unit (str, optional): The unit of the variable being plotted (e.g., "km/h", "%").
-                                 Appears in the y-axis label. Defaults to None.
+        lap_1 (dict): First driver's lap payload containing 'Telemetry' and 'Driver'.
+        lap_2 (dict): Second driver's lap payload containing 'Telemetry' and 'Driver'.
+        variable (str): Telemetry column to compute the delta for.
+        turns (pandas.DataFrame): Turn DataFrame with 'Number' and 'Distance'.
+        y_unit (str, optional): Unit string for y-axis label. Defaults to None.
+
+    Returns:
+        matplotlib.figure.Figure: The created figure object.
     """
 
     lap_1_telemetry = lap_1["Telemetry"]
@@ -147,6 +136,17 @@ def plot_variable_delta(lap_1, lap_2, variable, turns, y_unit=None):
 
 
 def barplot_feature_comparison(lap_1, lap_2, feature, y_unit=None):
+    """Bar plot comparison of a segment/turn feature between two drivers.
+
+    Parameters:
+        lap_1 (dict): First driver's lap payload with 'Segments' or 'Turns' DataFrame.
+        lap_2 (dict): Second driver's lap payload with 'Segments' or 'Turns' DataFrame.
+        feature (str): Column name of the feature to compare.
+        y_unit (str, optional): Unit string for y-axis label. Defaults to None.
+
+    Returns:
+        matplotlib.figure.Figure: The created figure object.
+    """
 
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
@@ -218,6 +218,17 @@ def barplot_feature_comparison(lap_1, lap_2, feature, y_unit=None):
 
 
 def barplot_feature_delta(lap_1, lap_2, feature, y_unit=None):
+    """Bar plot of the delta for a segment/turn feature between two drivers.
+
+    Parameters:
+        lap_1 (dict): First driver's lap payload with 'Segments' or 'Turns' DataFrame.
+        lap_2 (dict): Second driver's lap payload with 'Segments' or 'Turns' DataFrame.
+        feature (str): Column name of the feature to compute the delta for.
+        y_unit (str, optional): Unit string for y-axis label. Defaults to None.
+
+    Returns:
+        matplotlib.figure.Figure: The created figure object.
+    """
 
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
@@ -281,7 +292,20 @@ def calculate_feature_correlation(
     x_feature,
     y_feature,
 ):
-    """Calculates Pearson and Spearman correlation between feature deltas."""
+    """Calculate Pearson and Spearman correlations between feature deltas.
+
+    Computes the delta for `x_feature` and `y_feature` between two drivers and
+    returns Pearson and Spearman correlation statistics.
+
+    Parameters:
+        lap_1 (dict): First driver's lap payload with 'Segments' or 'Turns' DataFrame.
+        lap_2 (dict): Second driver's lap payload with 'Segments' or 'Turns' DataFrame.
+        x_feature (str): Column name used as the X feature.
+        y_feature (str): Column name used as the Y feature.
+
+    Returns:
+        pandas.DataFrame: DataFrame containing correlation coefficients and p-values.
+    """
 
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
@@ -379,7 +403,17 @@ def scatterplot_features_relationship(
     x_feature,
     y_feature,
 ):
-    """Generates a scatter plot showing the relationship between feature deltas."""
+    """Scatter plot of delta relationship between two features across segments/turns.
+
+    Parameters:
+        lap_1 (dict): First driver's lap payload with 'Segments' or 'Turns' DataFrame.
+        lap_2 (dict): Second driver's lap payload with 'Segments' or 'Turns' DataFrame.
+        x_feature (str): Feature to use on the x-axis.
+        y_feature (str): Feature to use on the y-axis.
+
+    Returns:
+        matplotlib.figure.Figure: The created figure object.
+    """
 
     driver_1 = lap_1["Driver"]
     driver_2 = lap_2["Driver"]
@@ -480,15 +514,17 @@ def scatterplot_features_relationship(
 
 
 def compare_times(lap_1, lap_2):
-    """
-    Compare segment and turn times between two drivers.
+    """Compare segment and turn times between two drivers.
 
-    Returns
-    -------
-    segment_df : pd.DataFrame
-        Segment times, delta, and cumulative delta.
-    turn_df : pd.DataFrame
-        Turn times and delta.
+    Creates and displays DataFrames with segment times, cumulative delta, and
+    turn times deltas for the two drivers.
+
+    Parameters:
+        lap_1 (dict): First driver's lap payload with 'Segments' and 'Turns' DataFrames.
+        lap_2 (dict): Second driver's lap payload with 'Segments' and 'Turns' DataFrames.
+
+    Returns:
+        None
     """
 
     driver_1 = lap_1["Driver"]
@@ -520,20 +556,15 @@ def compare_times(lap_1, lap_2):
 
 
 def compare_features(lap_1, lap_2, features):
-    """
-    Compare selected features between two drivers.
+    """Compare selected features between two drivers and display paired table.
 
-    Parameters
-    ----------
-    lap_1, lap_2 : dict
-        Lap data for the two drivers.
-    features : list[str]
-        Features to compare.
+    Parameters:
+        lap_1 (dict): First driver's lap payload with 'Segments' or 'Turns'.
+        lap_2 (dict): Second driver's lap payload with 'Segments' or 'Turns'.
+        features (list[str]): List of feature column names to compare.
 
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with the label column and paired feature columns.
+    Returns:
+        None
     """
 
     feature_type = "Segments" if features[0] in lap_1["Segments"].columns else "Turns"
