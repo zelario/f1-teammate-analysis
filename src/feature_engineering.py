@@ -324,8 +324,6 @@ def analyze_time_segments(lap, turns):
         segment_times.append(
             {
                 "Segment": i,
-                "StartDistance": start_distance,
-                "EndDistance": end_distance,
                 "SegmentTime": end_time - start_time,
             }
         )
