@@ -1,6 +1,6 @@
 # F1 Teammate Analysis
 
-## How can two drivers, driving the same car, produce different lap times??
+## How do teammates' driving styles influence lap times?
 
 A Formula 1 data analysis project that investigates the performance differences between teammates driving the same car.
 
