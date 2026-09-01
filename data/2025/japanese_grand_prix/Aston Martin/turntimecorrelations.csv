@@ -1,0 +1,7 @@
+FeatureX       , FeatureY, Pearson, PearsonP, Spearman, SpearmanP
+ApexSpeed      , TurnTime, -0.537 ,    0.022, -0.519  ,     0.027
+EntrySpeed     , TurnTime, -0.469 ,    0.05 , -0.049  ,     0.848
+BrakingPoint   , TurnTime, 0.269  ,    0.28 , 0.244   ,     0.329
+BrakingDuration, TurnTime, -0.209 ,    0.406, -0.389  ,     0.111
+BrakingDistance, TurnTime, -0.094 ,    0.711, -0.28   ,     0.26
+ExitSpeed      , TurnTime, 0.047  ,    0.852, -0.117  ,     0.645

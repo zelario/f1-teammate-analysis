@@ -1,0 +1,71 @@
+Turn,TimeDelta,PossibleMainContributor,ContributorScore,Direction
+16,0.308,BrakingPoint,2.25,higher for ALO
+16,0.308,ApexSpeed,0.827,lower for ALO
+16,0.308,EntrySpeed,0.525,lower for ALO
+16,0.308,BrakingDuration,0.389,lower for ALO
+16,0.308,ExitSpeed,0.284,higher for ALO
+17,-0.218,ApexSpeed,2.442,higher for ALO
+17,-0.218,EntrySpeed,0.013,higher for ALO
+17,-0.218,ExitSpeed,0.0,higher for ALO
+5,0.199,ExitSpeed,0.048,higher for ALO
+5,0.199,EntrySpeed,0.0,higher for ALO
+5,0.199,ApexSpeed,0.0,higher for ALO
+14,-0.153,ApexSpeed,0.799,higher for ALO
+14,-0.153,BrakingPoint,0.0,similar
+14,-0.153,BrakingDistance,0.0,similar
+14,-0.153,BrakingDuration,0.0,lower for ALO
+14,-0.153,EntrySpeed,0.0,lower for ALO
+6,0.148,BrakingPoint,1.125,higher for ALO
+6,0.148,ApexSpeed,0.268,lower for ALO
+6,0.148,ExitSpeed,0.004,higher for ALO
+6,0.148,BrakingDistance,0.0,higher for ALO
+6,0.148,BrakingDuration,0.0,higher for ALO
+2,-0.06,ApexSpeed,0.595,higher for ALO
+2,-0.06,EntrySpeed,0.034,higher for ALO
+2,-0.06,ExitSpeed,0.0,higher for ALO
+4,0.05,ApexSpeed,0.255,lower for ALO
+4,0.05,ExitSpeed,0.012,higher for ALO
+4,0.05,EntrySpeed,0.0,higher for ALO
+13,-0.04,ApexSpeed,0.165,higher for ALO
+13,-0.04,BrakingPoint,0.0,similar
+13,-0.04,BrakingDistance,0.0,lower for ALO
+13,-0.04,BrakingDuration,0.0,lower for ALO
+13,-0.04,EntrySpeed,0.0,lower for ALO
+7,-0.022,ApexSpeed,1.19,higher for ALO
+7,-0.022,EntrySpeed,0.102,higher for ALO
+7,-0.022,ExitSpeed,0.0,higher for ALO
+10,-0.021,ApexSpeed,0.403,higher for ALO
+10,-0.021,EntrySpeed,0.037,higher for ALO
+10,-0.021,ExitSpeed,0.028,lower for ALO
+8,-0.02,ApexSpeed,1.44,higher for ALO
+8,-0.02,BrakingDuration,0.341,higher for ALO
+8,-0.02,BrakingDistance,0.25,higher for ALO
+8,-0.02,EntrySpeed,0.003,higher for ALO
+8,-0.02,BrakingPoint,0.0,similar
+18,-0.013,ApexSpeed,1.443,higher for ALO
+18,-0.013,EntrySpeed,0.125,higher for ALO
+18,-0.013,ExitSpeed,0.0,higher for ALO
+11,0.011,BrakingDuration,0.501,lower for ALO
+11,0.011,ExitSpeed,0.125,higher for ALO
+11,0.011,BrakingDistance,0.125,lower for ALO
+11,0.011,EntrySpeed,0.123,lower for ALO
+11,0.011,BrakingPoint,0.0,similar
+3,-0.01,ApexSpeed,0.039,higher for ALO
+3,-0.01,EntrySpeed,0.024,higher for ALO
+3,-0.01,ExitSpeed,0.0,higher for ALO
+9,0.009,ApexSpeed,0.288,lower for ALO
+9,0.009,BrakingDuration,0.279,lower for ALO
+9,0.009,EntrySpeed,0.214,lower for ALO
+9,0.009,ExitSpeed,0.132,higher for ALO
+9,0.009,BrakingDistance,0.125,lower for ALO
+12,-0.006,ApexSpeed,0.754,higher for ALO
+12,-0.006,EntrySpeed,0.065,higher for ALO
+12,-0.006,ExitSpeed,0.045,lower for ALO
+15,-0.005,EntrySpeed,0.029,higher for ALO
+15,-0.005,ApexSpeed,0.014,higher for ALO
+15,-0.005,ExitSpeed,0.004,lower for ALO
+1,0.002,BrakingDuration,0.237,lower for ALO
+1,0.002,BrakingDistance,0.125,lower for ALO
+1,0.002,ExitSpeed,0.031,higher for ALO
+1,0.002,BrakingPoint,0.0,similar
+1,0.002,EntrySpeed,0.0,higher for ALO

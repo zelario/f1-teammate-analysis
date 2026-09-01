@@ -413,10 +413,13 @@ def save_figure(
         print(f"Error saving figure: {plot_path}. " f"Exception: {e}")
 
 
-def save_dataframe(lap, dataframe_name, year, grand_prix):
+def save_dataframe(dataframe, dataframe_name, year, grand_prix, team):
 
-    dataframe = lap[dataframe_name]
-    driver = lap["Driver"]
+    driver_data = isinstance(dataframe, dict) and dataframe_name in dataframe
+
+    if driver_data:
+        driver = dataframe.get("Driver")
+        dataframe = pd.DataFrame(dataframe[dataframe_name])
 
     for column in dataframe.columns:
         if pd.api.types.is_float_dtype(dataframe[column]):
@@ -426,13 +429,24 @@ def save_dataframe(lap, dataframe_name, year, grand_prix):
 
         project_root = Path(__file__).resolve().parent.parent
 
-        data_dir = (
-            project_root
-            / "data"
-            / str(year)
-            / str(grand_prix).strip().replace(" ", "_").lower()
-            / driver
-        )
+
+        if driver_data:
+            data_dir = (
+                project_root
+                / "data"
+                / str(year)
+                / str(grand_prix).strip().replace(" ", "_").lower()
+                / team
+                / driver
+            )
+        else:
+            data_dir = (
+                project_root
+                / "data"
+                / str(year)
+                / str(grand_prix).strip().replace(" ", "_").lower()
+                / team
+            )
 
         data_dir.mkdir(parents=True, exist_ok=True)
 

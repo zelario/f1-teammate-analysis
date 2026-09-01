@@ -590,3 +590,4 @@ def compare_features(lap_1, lap_2, features):
         columns.extend([f"{feature}_{lap_1['Driver']}", f"{feature}_{lap_2['Driver']}"])
 
     display(result[columns])
+
